@@ -1,0 +1,261 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="description" content="Rebuild a real mouse brain in a 3D anatomical puzzle. Play directly in your browser with 15, 324, or 671 regions." />
+    <meta name="theme-color" content="#080d1c" />
+    <title>Brain Part(s)y · A 3D brain puzzle</title>
+
+    <script type="module" src="/src/main.js"></script>
+  </head>
+  <body class="at-home">
+    <div id="viewport"></div>
+    <button
+      id="panel-toggle"
+      class="game-ui"
+      aria-controls="region-panel"
+      aria-expanded="false"
+    >
+      Regions & controls
+    </button>
+    <header>
+      <button class="brand" id="brand-home">
+        <span class="brand-icon">◈</span> BRAIN PART(S)Y
+        <small>THE BRAIN, PIECE BY PIECE</small>
+      </button>
+      <div class="atlas-tag"><i></i> ALLEN CCFv3 <span>25 µm</span></div>
+      <nav>
+        <button id="menu" class="quiet" hidden>← Main menu</button
+        ><button id="help" class="quiet">How to play <span>?</span></button>
+      </nav>
+    </header>
+    <main id="home-screen"><img class="brain-preview" src="./brain-preview.png" alt="Colored anatomical regions of the Allen mouse brain" width="720" height="720" />
+      <div class="home-content">
+        <div class="eyebrow">PUT YOUR HEAD TOGETHER</div>
+        <h1>Every part<br /><em>plays a part.</em></h1>
+        <p class="home-intro">
+          Watch a whole brain become a whirlwind of pieces. Bring them back
+          together on solid ground.
+        </p>
+        <div class="eyebrow challenge-label">CHOOSE YOUR VOYAGE</div>
+        <div class="difficulty-cards" role="group" aria-label="Difficulty">
+          <button data-mode="easy" class="active" aria-pressed="true">
+            <span>01</span><strong>Shallows</strong
+            ><small>Easy · 15 regions</small>
+            <p>The broad divisions.<br />A place to begin.</p></button
+          ><button data-mode="medium" aria-pressed="false">
+            <span>02</span><strong>Open water</strong
+            ><small>Medium · 324 regions</small>
+            <p>Go beneath the surface.<br />Explore the hierarchy.</p></button
+          ><button data-mode="hard" aria-pressed="false">
+            <span>03</span><strong>The deep</strong
+            ><small>Hard · 671 regions</small>
+            <p>Every labeled region.<br />The full expedition.</p>
+          </button>
+        </div>
+        <div class="home-options">
+          <span class="ground-badge">● Gravity starts on</span
+          ><span>Ground-plane dragging · Optional height assist</span>
+        </div>
+        <div class="home-start">
+          <button id="start-game" class="primary">
+            Begin voyage <span>↗</span></button
+          ><button id="continue-game" hidden>Resume voyage →</button>
+        </div>
+        <p class="home-note">Real anatomy. Your own pace. No installation. <a href="./THIRD_PARTY_NOTICES.txt" target="_blank" rel="noopener">Credits &amp; atlas</a></p>
+      </div>
+      <div class="home-caption">
+        <span class="eyebrow">ONE BRAIN. HUNDREDS OF CONNECTIONS.</span>
+        <p>Allen mouse brain atlas · 25 µm source data</p>
+      </div>
+    </main>
+    <aside id="region-panel" class="panel game-ui">
+      <div class="eyebrow" id="voyage-label">YOUR VOYAGE</div>
+      <p id="level-description" class="muted">Broad anatomical divisions</p>
+      <label for="region-search">Find a region</label
+      ><input
+        id="region-search"
+        placeholder="Name, acronym or Allen ID…"
+        autocomplete="off"
+      />
+      <div id="search-results"></div>
+      <div class="selection">
+        <span class="eyebrow" id="selection-tag">YOUR REFERENCE PIECE</span>
+        <h2 id="region-name">Loading the atlas…</h2>
+        <p id="region-path">Preparing anatomical surfaces</p>
+        <div id="region-detail"></div>
+        <button id="focus">Focus selected <kbd>F</kbd></button
+        ><button id="next">Find an unplaced piece</button>
+      </div>
+      <div class="physics-controls">
+        <label
+          ><input id="gravity" type="checkbox" checked /> Gravity
+          <span>on / off</span></label
+        ><label
+          ><input id="height-assist" type="checkbox" checked /> Height
+          assist</label
+        >
+        <p>
+          Drag across the ground. Correct neighbors glow when a fit is close.
+        </p>
+        <fieldset id="height-control">
+          <legend>Lift or lower selected piece</legend>
+          <button id="lift-down">↓ Lower <kbd>Q</kbd></button
+          ><button id="lift-up">↑ Lift <kbd>E</kbd></button>
+        </fieldset>
+      </div>
+      <div id="fit-cue" hidden role="status"></div>
+      <div class="switch-row">
+        <label><input id="guide" type="checkbox" /> Show placement guide</label>
+      </div>
+      <div class="switch-row">
+        <label
+          ><input id="spotlight" type="checkbox" /> Selected & neighbors
+          only</label
+        >
+      </div>
+      <button id="shuffle" class="primary">
+        Shuffle loose pieces <span>⤨</span>
+      </button>
+      <p class="shuffle-note">Connected pieces stay exactly where they are.</p>
+      <p class="small" id="seed-label"></p>
+      <p id="save-status" role="status">Progress saves on this browser</p>
+    </aside>
+    <div class="stats game-ui">
+      <div class="completion-block">
+        <div class="completion-heading">
+          <small>BRAIN ASSEMBLY</small><strong id="progress">0%</strong>
+        </div>
+        <div
+          id="completion-track"
+          class="progress-track"
+          role="progressbar"
+          aria-label="Puzzle completion"
+          aria-valuemin="0"
+          aria-valuemax="100"
+          aria-valuenow="0"
+        >
+          <i id="progress-bar"></i>
+        </div>
+        <div class="completion-detail">
+          <span id="progress-detail">0 connections</span
+          ><span id="docked-count">0 regions docked</span>
+        </div>
+      </div>
+      <div class="time-block">
+        <small>ELAPSED</small><strong id="timer">00:00</strong>
+      </div>
+      <button id="pause" title="Pause timer and hide puzzle">Ⅱ</button>
+    </div>
+    <div id="intro-banner" class="intro-banner game-ui" hidden>
+      <div>
+        <span class="eyebrow">PREPARING YOUR PUZZLE</span>
+        <h2 id="intro-title">Meet the brain</h2>
+        <p id="intro-detail"></p>
+      </div>
+      <button id="skip-intro">Skip opening →</button>
+    </div>
+    <div class="scene-actions game-ui">
+      <button id="overview">Fit all pieces</button
+      ><button id="brain-view">View brain</button
+      ><button id="hint">Guide selected</button>
+    </div>
+    <div id="tooltip" hidden></div>
+    <div id="toast" role="status" aria-live="polite"></div>
+    <footer class="game-ui">
+      <span
+        ><i class="cyan-dot"></i>
+        <span id="status">Building your constellation</span></span
+      ><span
+        >DRAG on ground <b>·</b> SCROLL zoom <b>·</b> Q / E lift <b>·</b> DRAG
+        space to orbit</span
+      >
+    </footer>
+    <div id="loading" class="overlay">
+      <div>
+        <span class="brand-icon">◈</span>
+        <h2>Opening the atlas</h2>
+        <button id="retry-load" hidden>Retry download</button
+        ><button id="cancel-load" hidden>Back to menu</button>
+        <p id="loading-text">Loading 25 µm brain regions…</p>
+      </div>
+    </div>
+    <dialog id="help-dialog">
+      <button class="close" id="close-help" aria-label="Close help">×</button>
+      <div class="eyebrow">WELCOME TO BRAIN PART(S)Y</div>
+      <h2>A little more grounded.</h2>
+      <p>
+        Each puzzle begins assembled, separates, swirls in a tornado, then falls
+        onto the ground. You can skip this opening; it never counts toward your
+        time.
+      </p>
+      <ul>
+        <li>
+          <b>Drag a piece</b> across the ground plane. Drag empty space to
+          orbit, right-drag to pan, scroll to zoom. <b>F</b> focuses your
+          selection.
+        </li>
+        <li>
+          <b>E lifts and Q lowers.</b> You can also hold the Lift / Lower
+          buttons. Arrow keys move across the ground. Hold Shift for finer
+          movement.
+        </li>
+        <li>
+          <b>Gravity starts on.</b> Released pieces and floating clusters settle
+          on the floor. Turn it off to hold lifted pieces in midair. The floor
+          remains solid in either mode.
+        </li>
+        <li>
+          <b>Height assist</b> matches vertical placement when a true neighbor
+          is close horizontally. The target glows gold; release or press Enter
+          to connect. Turn assistance off for fully manual placement.
+        </li>
+        <li>
+          A <b>sparkle and confirmation</b> mean a correct connection. Joined
+          pieces stay together and move as one. The largest reference region
+          stays anchored.
+        </li>
+        <li>
+          <b>Shuffle loose pieces</b> moves only unconnected pieces. Joined
+          clusters, progress and time are preserved.
+        </li>
+      </ul>
+      <p>
+        The completion bar counts connections, including floating clusters. The
+        smaller docked count shows how many regions have joined the anchored
+        brain. Every piece must be connected to finish.
+      </p>
+      <p>
+        The timer starts on your first move or shuffle after the opening. Menu
+        and pause stop both time and physics. The game uses floor-only physics:
+        pieces do not physically collide with other pieces. Disconnected islands
+        and both hemispheres can belong to the same anatomical label.
+      </p>
+      <button id="start-help" class="primary">Got it <span>↗</span></button>
+    </dialog>
+    <dialog id="complete-dialog">
+      <div class="eyebrow">EVERY REGION. RECONNECTED.</div>
+      <h2>Beautifully connected.</h2>
+      <p id="completion-text"></p>
+      <button id="play-again" class="primary">Choose another voyage ↗</button
+      ><button id="inspect-complete">Explore completed brain</button>
+    </dialog>
+    <div id="paused" class="overlay" hidden>
+      <div>
+        <div class="eyebrow">TAKE YOUR TIME</div>
+        <h2>A moment of quiet.</h2>
+        <p>Your timer, opening animation and gravity are paused.</p>
+        <button id="resume" class="primary">Resume voyage</button
+        ><button id="pause-menu">Main menu</button>
+      </div>
+    </div>
+    <dialog id="tutorial-dialog" aria-labelledby="tutorial-title">
+      <p class="eyebrow" id="tutorial-count"></p>
+      <h2 id="tutorial-title"></h2>
+      <p id="tutorial-text"></p>
+      <button id="tutorial-next" class="primary">Next →</button
+      ><button id="tutorial-skip">Skip tutorial</button>
+    </dialog>
+  </body>
+</html>
