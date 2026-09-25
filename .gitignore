@@ -1,0 +1,11 @@
+node_modules/
+dist/
+__pycache__/
+.cache/
+playwright-report/
+test-results/
+.tmp/
+.browsers/
+/home.png
+/game.png
+/intro.png

@@ -1,0 +1,38 @@
+{
+  "atlas": "Allen Mouse CCFv3 (2017)",
+  "resolutionUm": 25,
+  "shape": [
+    528,
+    320,
+    456
+  ],
+  "sources": {
+    "annotation_25.nrrd": "https://download.alleninstitute.org/informatics-archive/current-release/mouse_ccf/annotation/ccf_2017/annotation_25.nrrd",
+    "structure_graph.json": "https://api.brain-map.org/api/v2/structure_graph_download/1.json"
+  },
+  "sha256": {
+    "annotation_25.nrrd": "c620cbcc562183e4dcd40250d440130501781f74b41de35b1c1bdabace290c42",
+    "structure_graph.json": "b5f0d024d1df09ee18aef15093f55240f4a70b3924ee9689add612dadff80386"
+  },
+  "note": "All nonzero annotation labels retained, including residual parent labels, fiber tracts and ventricular systems. Bilateral regions are one piece. Surface meshes are decimated; adjacency uses original 25 \u00b5m voxels.",
+  "levels": {
+    "easy": {
+      "pieces": 15,
+      "triangles": 151022,
+      "components": 1,
+      "bytes": 2680728
+    },
+    "medium": {
+      "pieces": 324,
+      "triangles": 763410,
+      "components": 1,
+      "bytes": 13681320
+    },
+    "hard": {
+      "pieces": 671,
+      "triangles": 677176,
+      "components": 1,
+      "bytes": 12126408
+    }
+  }
+}
