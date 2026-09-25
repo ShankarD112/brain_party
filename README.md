@@ -54,9 +54,9 @@ Import this private repository into the chosen static host with access limited t
 - Node: 22.12+ or 24
 - No server, environment variables, API keys, or database required.
 
-`netlify.toml` and `vercel.json` include those settings. A relative Vite base also supports hosting beneath a subpath. Serve `.bin.gz` as ordinary binary files: do **not** add a `Content-Encoding: gzip` header to these files, since the app explicitly decompresses them. The host may compress JS/CSS normally.
+`netlify.toml` and `vercel.json` include those settings. A relative Vite base also supports hosting beneath a subpath. The loader accepts `.bin.gz` both as ordinary files and as HTTP gzip responses: it checks the received bytes before decompression to avoid decoding twice. The host may compress JS/CSS normally.
 
-Choose the website audience separately from repository visibility. A private source repository does not make the deployed website private. No deployment credentials are included and no live deployment is configured here.
+Choose the website audience separately from repository visibility. A private source repository does not make the deployed website private. `.openai/hosting.json` identifies the separately managed private Sites build; no deployment credentials are included. GitHub changes do not automatically publish to Sites.
 
 ## Atlas and source
 

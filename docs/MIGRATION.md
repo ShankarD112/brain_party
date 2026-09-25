@@ -8,4 +8,4 @@ The Windows meshes total about 182 MB uncompressed. For browser delivery this br
 
 New browser work includes branding, selected-level compressed fetching, a lightweight menu thumbnail rendered from the real atlas, retry UI, validated local saves, onboarding, mobile panel controls, static hosting configuration, and CI browser checks. The desktop shell and standalone offline packager are excluded from the web project.
 
-Remaining work before production signoff: inspect the CI browser screenshots, check real touch-device performance, choose a hosting account/audience, and connect/deploy the private repository. Multiplayer is a separate future feature, not part of this migration.
+Follow-up on 2026-09-25: fixed double decompression when a host serves gzip with HTTP content encoding. All 15 rule/data tests and six Chromium browser scenarios pass locally and in GitHub Actions; desktop and narrow-screen screenshots were inspected. A private Sites deployment is configured separately from the private GitHub source repository. Physical touch-device performance remains to be checked. Multiplayer is a separate future feature, not part of this migration.
