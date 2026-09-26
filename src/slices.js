@@ -51,7 +51,7 @@ export class SliceViewer {
     if(!this.meshes || !this.canvas.clientWidth)return;
     const width=Math.round(this.canvas.clientWidth*devicePixelRatio),height=Math.round(this.canvas.clientHeight*devicePixelRatio);
     this.canvas.width=width;this.canvas.height=height;
-    const ctx=this.ctx;ctx.fillStyle='#07131f';ctx.fillRect(0,0,width,height);
+    const ctx=this.ctx;ctx.fillStyle=this.theme?.slice||'#07131f';ctx.fillRect(0,0,width,height);
     const axes=[0,1,2].filter(a=>a!==this.axis);
     // Coronal: LR/DV. Sagittal: AP/DV. Horizontal: LR/AP.
     const h=this.axis===0?2:axes[0],v=this.axis===0?1:axes[1];
@@ -59,7 +59,7 @@ export class SliceViewer {
     const mx=(this.min[h]+this.max[h])/2,my=(this.min[v]+this.max[v])/2;
     const project=p=>[width/2+(p[axes.indexOf(h)]-mx)*scale,height/2-(p[axes.indexOf(v)]-my)*scale];
     this.hitPaths=[];let joined=0,visibleSelected=false;
-    const ids=[...this.meshes.keys()].sort((a,b)=>Number(a===this.selected)-Number(b===this.selected));
+    const ids=[...this.meshes.keys()].sort((a,b)=>Number(a===this.selected||this.highlights?.has(a))-Number(b===this.selected||this.highlights?.has(b)));
     for(const id of ids) {
       const group=this.puzzle.group(id), connected=group.members.size>1 || this.puzzle.complete;
       if(connected)joined++;
@@ -69,10 +69,10 @@ export class SliceViewer {
       if(!contours){const m=this.meshes.get(id);contours=sectionContours(m.geometry.attributes.position.array,m.geometry.index.array,m.userData.piece.center,this.axis,this.level);if(this.cache.size>1600)this.cache.clear();this.cache.set(key,contours);}
       const path=new Path2D(),outline=new Path2D();
       for(const c of contours){const pts=c.points.map(project);for(const dest of c.closed?[path,outline]:[outline]){dest.moveTo(...pts[0]);for(const p of pts.slice(1))dest.lineTo(...p);if(c.closed)dest.closePath();}}
-      const selected=id===this.selected;
-      ctx.globalAlpha=selected?1:connected?(document.getElementById("xray").checked?.32:.8):.06;
-      ctx.fillStyle=this.meshes.get(id).userData.piece.color;ctx.fill(path,'evenodd');
-      ctx.strokeStyle=selected?'#fff5cc':connected?'#9cadbc':'#6a8497';ctx.lineWidth=(selected?1.7:.6)*devicePixelRatio;ctx.stroke(outline);
+      const selected=id===this.selected || this.highlights?.has(id);
+      ctx.globalAlpha=selected?1:connected?(document.getElementById("xray").checked?.12:.85):.045;
+      ctx.fillStyle=this.meshes.get(id).userData.displayColor||this.meshes.get(id).userData.piece.color;ctx.fill(path,'evenodd');
+      ctx.strokeStyle=selected?(this.theme?.ink||'#fff5cc'):(this.theme?.muted||'#6a8497');ctx.lineWidth=(selected?1.7:.6)*devicePixelRatio;ctx.stroke(outline);
       if(connected || selected)this.hitPaths.push({id,path});
       if(selected && contours.length)visibleSelected=true;
     }

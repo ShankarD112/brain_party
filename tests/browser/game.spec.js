@@ -278,3 +278,63 @@ test('free clusters, bounded movement, linked slices, and cross-view highlightin
   expect(await page.evaluate(()=>window.__TEST__.selected)).toBe(info.b);
   await page.screenshot({path:'test-results/linked-slices.png'});
 });
+
+test('minimal home, animated previews, theme persistence, menu resume and difficulty switching',async({page})=>{
+ test.setTimeout(180000);
+ const errors=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.emulateMedia({reducedMotion:'reduce'});
+ await page.goto('/?test');
+ await expect(page.locator('#home-screen h1')).toHaveText('BRAIN PART(S)Y');
+ await expect(page.locator('#start-game')).toHaveText('Start');
+ await expect(page.locator('#continue-game')).toBeHidden();
+ await page.locator('#theme').selectOption('midnight');
+ await expect(page.locator('body')).toHaveAttribute('data-theme','midnight');
+ await page.reload();await expect(page.locator('#theme')).toHaveValue('midnight');
+ await page.locator('#theme').selectOption('sand');
+ await page.locator('#start-game').click();
+ await expect(page.locator('#loading')).toBeHidden({timeout:60000});
+ await page.locator('#tutorial-skip').click();
+ const seed=await page.evaluate(()=>window.__TEST__.physics.seed);
+ for(let i=0;i<3;i++){
+  await page.locator('#menu').click();await expect(page.locator('#continue-game')).toBeVisible();
+  await page.locator('#continue-game').click();
+  await expect(page.locator('#home-screen')).toBeHidden();await expect(page.locator('#paused')).toBeHidden();
+  expect(await page.evaluate(()=>window.__TEST__.physics.seed)).toBe(seed);
+  const before=await page.evaluate(()=>window.__TEST__.puzzle.group(window.__TEST__.selected).offset[1]);
+  await page.keyboard.down('e');await page.waitForTimeout(300);await page.keyboard.up('e');
+  expect(await page.evaluate(()=>window.__TEST__.puzzle.group(window.__TEST__.selected).offset[1])).toBeGreaterThan(before);
+ }
+ await page.locator('#menu').click();
+ await page.emulateMedia({reducedMotion:'no-preference'});
+ await page.locator('[data-mode=medium]').hover();
+ // Motion preference is sampled at boot; a reload enables animated posters.
+ await page.reload();await page.locator('[data-mode=medium]').hover();
+ await expect(page.locator('#difficulty-preview')).toHaveAttribute('src',/sand-medium.gif$/);
+ await page.locator('[data-mode=medium]').click();
+ page.on('dialog',dialog=>dialog.accept());await page.locator('#start-game').click();
+ await expect(page.locator('#loading')).toBeHidden({timeout:60000});await page.locator('#skip-intro').click();
+ await expect(page.locator('#docked-count')).toContainText('/ 324');
+ await page.locator('#menu').click();await page.locator('#continue-game').click();
+ await expect(page.locator('#docked-count')).toContainText('/ 324');
+ await page.locator('#menu').click();await page.screenshot({path:'test-results/minimal-home.png'});
+ expect(errors).toEqual([]);
+});
+
+test('search preserves multiple high-contrast highlights in 2D and 3D',async({page})=>{
+ await begin(page);
+ for(const name of ['Medulla','Thalamus']){
+  await page.locator('#region-search').fill(name);
+  await page.locator('#search-results button').filter({hasText:new RegExp('^'+name+'$')}).click();
+ }
+ const result=await page.evaluate(()=>{
+  const t=window.__TEST__,ids=[...t.highlights];t.slices.draw();
+  return {ids,highlighted:ids.map(id=>({opacity:t.meshes.get(id).material.opacity,depthTest:t.meshes.get(id).material.depthTest})),other:[...t.meshes].filter(([id])=>!ids.includes(id)).map(([,m])=>m.material.opacity),linked:ids.every(id=>t.slices.highlights.has(id))};
+ });
+ expect(result.ids).toHaveLength(2);expect(result.linked).toBe(true);
+ expect(result.highlighted.every(m=>m.opacity===1&&!m.depthTest)).toBe(true);
+ expect(result.other.every(o=>o<.05)).toBe(true);
+ await expect(page.locator('#highlighted-regions button')).toHaveCount(2);
+ await page.screenshot({path:'test-results/multiple-highlights.png'});
+ await page.locator('#clear-highlights').click();
+ expect(await page.evaluate(()=>window.__TEST__.highlights.size)).toBe(0);
+});

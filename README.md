@@ -6,7 +6,7 @@ A browser-first 3D anatomical jigsaw puzzle. Open the website, choose a difficul
 
 This imports the attached Neurospace game into `ShankarD112/brain_party`. Ground-plane dragging, gravity, height assistance, the skippable opening, and connection feedback are recovered from Windows 1.2. The original source package supplies the smaller precomputed meshes, full contact graphs, atlas preprocessing, and rule tests.
 
-- **15 / 324 / 671 regions:** Easy (Shallows), Medium (Open water), and Hard (The deep).
+- **15 / 324 / 671 regions:** Easy, Medium, and Hard.
 - **On-demand loading:** the menu loads a small preview; only the chosen level's geometry is downloaded. Geometry is gzip compressed and decoded in the browser. Easy is approximately 1.5 MB compressed; Medium and Hard approximately 6 MB each.
 - **Device-local save/resume:** saves every five seconds after the opening, on pause/menu, and when the page is hidden. Resume restores clusters, offsets, time, seed, selection, and assistance settings. The timer stops while away. One active puzzle is saved per browser/origin; clearing browser data removes it. Storage denial is shown in the UI.
 - **Skippable tutorial**, keyboard controls, and an expandable region/control panel on narrow screens.
@@ -14,19 +14,21 @@ This imports the attached Neurospace game into `ShankarD112/brain_party`. Ground
 
 This remains a single-player puzzle. Shared rooms, accounts, online leaderboards, and multiplayer are not implemented. The repository remains private; this branch does not publish a live website automatically.
 
+The minimal homepage includes Start/Resume, Easy/Medium/Hard, and Beige/Ocean/Midnight themes. Region palettes vary by theme and use anatomical adjacency to separate neighbouring colours. Hover or focus a difficulty for its atlas turntable GIF; hovering the Difficulty label cycles all three. Reduced-motion mode uses static posters.
+
 ## Play
 
-Choose a difficulty and **Begin voyage**. Skip the opening if desired.
+Choose a difficulty and **Start**. Skip the opening if desired.
 
 - Drag a loose region across the ground. Drag empty space to orbit; scroll to zoom.
 - **E / Q** lift/lower; arrow keys move across the ground. **Shift** makes finer steps; **F** focuses the selection. Lift/Lower buttons also support press-and-hold.
-- Gravity starts on. Turn it off for gentle upward drift; small-volume regions rise faster than larger regions or joined clusters. Holding a piece pauses its drift. The floor, height limit, and finite board keep pieces within reach.
+- Gravity starts on. Turn it off for gentle upward drift; small-volume regions rise faster than larger regions or joined clusters. Holding a piece pauses its drift. Floating pieces stop three atlas units above their floor position. Both drift and manual lifting respect this ceiling. The floor and finite board keep pieces within reach.
 - With height assist on, a true anatomical neighbor glows gold when close enough horizontally. Release or press Enter to connect. Turn assistance off for manual vertical alignment.
-- Search finds regions by name, acronym, or Allen ID. Placement guides mark the anatomical target.
+- Search finds regions by name, acronym, or Allen ID. Click successive results to keep multiple regions highlighted in both views; remove individual chips or clear the search highlights. X-ray selection keeps highlighted surfaces opaque and dims the surrounding anatomy. Placement guides mark the anatomical target.
 - Start with any neighboring pair: there is no fixed core. Joined clusters remain movable, even after completion. Shuffle moves only unconnected pieces.
 - The completion bar counts connections across all clusters. Finish by joining every region into one anatomical assembly.
 - The linked 2D panel shows coronal, sagittal, and horizontal sections in atlas coordinates. Joined regions appear in colour, with faint remaining anatomy for context. Selection is linked across views; use the depth slider or Find selected. Optional transparency reveals a selected region inside its cluster.
-- Completion triggers a brief, skippable dorsal-side headspin and party hat/blower. Reduced-motion preferences skip the spin; the model remains explorable afterwards.
+- Completion triggers a brief, skippable dorsal-side headspin, then adds a party hat and animated paper blower for two jumps. Reduced-motion preferences skip the spin; the model remains explorable afterwards.
 
 Desktop mouse/keyboard is recommended for the larger levels. Modern WebGL2 and `DecompressionStream` support are required. Touch controls are included; mobile performance still depends on GPU and memory.
 

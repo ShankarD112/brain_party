@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <meta name="description" content="Rebuild a real mouse brain in a 3D anatomical puzzle. Play directly in your browser with 15, 324, or 671 regions." />
     <meta name="theme-color" content="#080d1c" />
-    <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
+
     <title>Brain Part(s)y · A 3D brain puzzle</title>
 
     <script type="module" src="/src/main.js"></script>
@@ -22,8 +22,7 @@
     </button>
     <header>
       <button class="brand" id="brand-home">
-        <span class="brand-icon">◈</span> BRAIN PART(S)Y
-        <small>THE BRAIN, PIECE BY PIECE</small>
+        BRAIN PART(S)Y
       </button>
       <div class="atlas-tag"><i></i> ALLEN CCFv3 <span>25 µm</span></div>
       <nav>
@@ -31,48 +30,22 @@
         ><button id="help" class="quiet">How to play <span>?</span></button>
       </nav>
     </header>
-    <main id="home-screen"><img class="brain-preview" src="./brain-preview.png" alt="Colored anatomical regions of the Allen mouse brain" width="720" height="720" />
+    <main id="home-screen">
       <div class="home-content">
-        <div class="eyebrow">PUT YOUR HEAD TOGETHER</div>
-        <h1>Every part<br /><em>plays a part.</em></h1>
-        <p class="home-intro">
-          Watch a whole brain become a whirlwind of pieces. Bring them back
-          together on solid ground.
-        </p>
-        <div class="eyebrow challenge-label">CHOOSE YOUR VOYAGE</div>
-        <div class="difficulty-cards" role="group" aria-label="Difficulty">
-          <button data-mode="easy" class="active" aria-pressed="true">
-            <span>01</span><strong>Shallows</strong
-            ><small>Easy · 15 regions</small>
-            <p>The broad divisions.<br />A place to begin.</p></button
-          ><button data-mode="medium" aria-pressed="false">
-            <span>02</span><strong>Open water</strong
-            ><small>Medium · 324 regions</small>
-            <p>Go beneath the surface.<br />Explore the hierarchy.</p></button
-          ><button data-mode="hard" aria-pressed="false">
-            <span>03</span><strong>The deep</strong
-            ><small>Hard · 671 regions</small>
-            <p>Every labeled region.<br />The full expedition.</p>
-          </button>
+        <h1>BRAIN PART(S)Y</h1>
+        <div class="home-start"><button id="start-game" class="primary">Start</button><button id="continue-game" hidden>Resume</button></div>
+        <h2 class="challenge-label" id="difficulty-label">Difficulty</h2>
+        <div class="difficulty-cards" role="group" aria-labelledby="difficulty-label">
+          <button data-mode="easy" class="active" aria-pressed="true"><strong>Easy</strong><small>15 regions</small></button>
+          <button data-mode="medium" aria-pressed="false"><strong>Medium</strong><small>324 regions</small></button>
+          <button data-mode="hard" aria-pressed="false"><strong>Hard</strong><small>671 regions</small></button>
         </div>
-        <div class="home-options">
-          <span class="ground-badge">● Gravity starts on</span
-          ><span>Ground-plane dragging · Optional height assist</span>
-        </div>
-        <div class="home-start">
-          <button id="start-game" class="primary">
-            Begin voyage <span>↗</span></button
-          ><button id="continue-game" hidden>Resume voyage →</button>
-        </div>
-        <p class="home-note">Real anatomy. Your own pace. No installation. <a href="./THIRD_PARTY_NOTICES.txt" target="_blank" rel="noopener">Credits &amp; atlas</a></p>
-      </div>
-      <div class="home-caption">
-        <span class="eyebrow">ONE BRAIN. HUNDREDS OF CONNECTIONS.</span>
-        <p>Allen mouse brain atlas · 25 µm source data</p>
+        <img id="difficulty-preview" src="./previews/sand-easy.png" alt="Easy: 15 brain regions" width="360" height="300" />
+        <label class="theme-control" for="theme">Theme <select id="theme"><option value="sand">Beige</option><option value="ocean">Ocean</option><option value="midnight">Midnight</option></select></label>
       </div>
     </main>
     <aside id="region-panel" class="panel game-ui">
-      <div class="eyebrow" id="voyage-label">YOUR VOYAGE</div>
+      <div class="eyebrow" id="voyage-label">YOUR PUZZLE</div>
       <p id="level-description" class="muted">Broad anatomical divisions</p>
       <label for="region-search">Find a region</label
       ><input
@@ -80,7 +53,7 @@
         placeholder="Name, acronym or Allen ID…"
         autocomplete="off"
       />
-      <div id="search-results"></div>
+      <div id="search-results"></div><div id="highlighted-regions" aria-label="Highlighted regions"></div><button id="clear-highlights" hidden>Clear search highlights</button>
       <div class="selection">
         <span class="eyebrow" id="selection-tag">SELECTED REGION</span>
         <h2 id="region-name">Loading the atlas…</h2>
@@ -98,7 +71,7 @@
           assist</label
         >
         <p>
-          Drag across the ground. Correct neighbors glow when a fit is close.
+          Drag across the ground. Correct neighbors glow when a fit is close. Floating pieces stop at the upper limit.
         </p>
         <fieldset id="height-control">
           <legend>Lift or lower selected piece</legend>
@@ -177,7 +150,7 @@
       ><button id="brain-view">View brain</button
       ><button id="hint">Guide selected</button>
     </div>
-    <div id="party-banner" class="party-banner" hidden role="status"><strong>Brain Part(s)y! 🎉</strong><span>A dorsal-side headspin, just for you.</span><button id="stop-party">Explore the brain</button></div>
+    <div id="party-banner" class="party-banner" hidden role="status"><strong>Brain Part(s)y! 🎉</strong><span>Spin, jump, celebrate.</span><button id="stop-party">Explore the brain</button></div>
     <div id="tooltip" hidden></div>
     <div id="toast" role="status" aria-live="polite"></div>
     <footer class="game-ui">
@@ -191,7 +164,7 @@
     </footer>
     <div id="loading" class="overlay">
       <div>
-        <span class="brand-icon">◈</span>
+
         <h2>Opening the atlas</h2>
         <button id="retry-load" hidden>Retry download</button
         ><button id="cancel-load" hidden>Back to menu</button>
@@ -220,7 +193,7 @@
         </li>
         <li>
           <b>Gravity starts on.</b> Released pieces and floating clusters settle
-          on the floor. Turn it off for a slow upward drift: smaller regions rise faster. The floor and play-area boundary remain solid in either mode.
+          on the floor. Turn it off for a slow upward drift: smaller regions rise faster. Pieces stop at the floating ceiling. The floor and play-area boundary remain solid in either mode.
         </li>
         <li>
           <b>Height assist</b> matches vertical placement when a true neighbor
@@ -252,7 +225,7 @@
       <div class="eyebrow">EVERY REGION. RECONNECTED.</div>
       <h2>Beautifully connected.</h2>
       <p id="completion-text"></p>
-      <button id="play-again" class="primary">Choose another voyage ↗</button
+      <button id="play-again" class="primary">Main menu</button
       ><button id="inspect-complete">Explore completed brain</button><button id="replay-party">Replay the party</button>
     </dialog>
     <div id="paused" class="overlay" hidden>
@@ -260,7 +233,7 @@
         <div class="eyebrow">TAKE YOUR TIME</div>
         <h2>A moment of quiet.</h2>
         <p>Your timer, opening animation and gravity are paused.</p>
-        <button id="resume" class="primary">Resume voyage</button
+        <button id="resume" class="primary">Resume</button
         ><button id="pause-menu">Main menu</button>
       </div>
     </div>

@@ -169,7 +169,7 @@ class Physics {
         if (this.gravity) this.fall(r, t);
         else {
           this.velocity.set(r.id, 0);
-          const room = Math.max(0, this.floorOffset(r) + 8 - r.offset[1]);
+          const room = Math.max(0, this.floorOffset(r) + 3 - r.offset[1]);
           r.offset[1] += this.driftSpeed(r) * t * Math.min(1, room);
         }
         r.offset = this.constrain(r, r.offset);
@@ -192,7 +192,7 @@ class Physics {
     const local = this.groupBounds({...group, offset:[0,0,0]});
     const result = [...offset];
     for (const axis of [0,2]) result[axis] = Math.max(-this.arenaHalf-local.min[axis], Math.min(this.arenaHalf-local.max[axis], result[axis]));
-    result[1] = Math.max(this.floorOffset(group), Math.min(this.floorOffset(group)+10, result[1]));
+    result[1] = Math.max(this.floorOffset(group), Math.min(this.floorOffset(group)+3, result[1]));
     return result;
   }
   move(id, offset) {

@@ -1,3 +1,4 @@
+import { themes, regionColors } from "./themes.js";
 import { SliceViewer } from "./slices.js";
 import { BrainParty } from "./party.js";
 import { loadAtlas } from "./atlas.js";
@@ -134,6 +135,9 @@ const meshes = /* @__PURE__ */ new Map(),
   hitPoint = new Vector3();
 const slices = new SliceViewer(scene, id => { select(id, true); focusSelected(); });
 const party = new BrainParty(meshRoot);
+const highlights = new Set();
+let themeName = "sand", regionPalette = new Map();
+slices.highlights = highlights;
 let boardBoundary;
 function updateBoardBoundary() {
   if(boardBoundary){scene.remove(boardBoundary);boardBoundary.geometry.dispose();boardBoundary.material.dispose();}
@@ -293,14 +297,44 @@ function stylePieces() {
   const group=selected===undefined?null:puzzle.group(selected), neighbors=new Set();
   if(group)for(const id of group.members)for(const n of puzzle.neighbors.get(id))neighbors.add(n);
   for(const [id,mesh] of meshes) {
-    const g=puzzle.group(id), chosen=id===selected;
-    mesh.visible=!$("spotlight").checked || g===group || neighbors.has(id);
-    const faded=$("xray").checked && group?.members.size>1 && !chosen && !party.active;
-    mesh.material.transparent=faded;mesh.material.opacity=faded?.14:1;mesh.material.depthWrite=!faded;
-    mesh.renderOrder=chosen?2:faded?1:0;
-    mesh.material.emissive.set(chosen?'#43bda3':g===snapCandidate?'#816520':id===hovered?'#274955':'#000000');
-    mesh.material.emissiveIntensity=chosen?.7:g===snapCandidate?.8:.25;
+    const g=puzzle.group(id), chosen=id===selected || highlights.has(id);
+    mesh.visible=chosen || !$("spotlight").checked || g===group || neighbors.has(id);
+    const faded=$("xray").checked && (group?.members.size>1 || highlights.size>0) && !chosen && !party.active;
+    const color=regionPalette.get(id)||mesh.userData.piece.color;
+    mesh.userData.displayColor=color;mesh.material.color.set(color);
+    mesh.material.transparent=faded;mesh.material.opacity=faded?.035:1;mesh.material.depthWrite=!faded;
+    mesh.material.depthTest=!(chosen && $("xray").checked && !party.active);
+    mesh.renderOrder=chosen?3:faded?1:0;
+    mesh.material.emissive.set(chosen?color:g===snapCandidate?'#816520':id===hovered?'#274955':'#000000');
+    mesh.material.emissiveIntensity=chosen?.55:g===snapCandidate?.8:.25;
   }
+}
+function renderHighlights() {
+  $("highlighted-regions").replaceChildren();
+  for(const id of highlights){
+    const b=document.createElement('button');b.textContent=meshes.get(id).userData.piece.acronym+' ×';
+    b.setAttribute('aria-label','Remove highlight: '+meshes.get(id).userData.piece.name);
+    b.onclick=()=>{highlights.delete(id);renderHighlights();stylePieces();slices.schedule();};
+    $("highlighted-regions").append(b);
+  }
+  $("clear-highlights").hidden=highlights.size===0;
+}
+function applyTheme(name) {
+  themeName=themes[name]?name:'sand';const theme=themes[themeName];
+  document.body.dataset.theme=themeName;
+  for(const key of ['background','surface','ink','muted','line','accent'])document.body.style.setProperty('--'+key,theme[key]);
+  scene.background.set(theme.background);floorMesh.material.color.set(theme.floor);
+  if(boardBoundary)boardBoundary.material.color.set(theme.accent);
+  slices.theme=theme;
+  if(data)regionPalette=regionColors(data,theme);
+  stylePieces();slices.schedule();
+  try{storage?.setItem('brain-party-theme',themeName);}catch{}
+  updatePreview(chosenMode,false);
+}
+function updatePreview(mode,animate=false){
+  const image=$("difficulty-preview");
+  image.src=`./previews/${themeName}-${mode}.${animate&&!reducedMotion?'gif':'png'}`;
+  image.alt=`${mode[0].toUpperCase()+mode.slice(1)}: ${{easy:15,medium:324,hard:671}[mode]} brain regions`;
 }
 function select(i, keepSlice = false) {
   ((selected = i), (snapCandidate = null));
@@ -502,6 +536,9 @@ function setScreen(i) {
   if(boardBoundary)boardBoundary.visible=i === "play";
   if(i === "home"){slices.plane.visible=false;$("complete-dialog").close();}
   if (i === "home") saveSession();
+  for(const d of document.querySelectorAll("dialog[open]"))d.close();
+  document.body.classList.remove("panel-open","slices-open");
+  $("panel-toggle").setAttribute("aria-expanded","false");$("slices-toggle").setAttribute("aria-expanded","false");
   ((screen = i),
     document.body.classList.toggle("at-home", i === "home"),
     ($("home-screen").hidden = i !== "home"),
@@ -518,6 +555,8 @@ function setScreen(i) {
     (floorRoot.visible = i === "play"),
     ($("intro-banner").hidden = i !== "play" || !physics?.intro),
     i === "play" && (meshRoot.rotation.set(0, 0, 0), updatePositions()));
+  lastFrame=performance.now();
+  if(i === "play"){updateIntro();stylePieces();slices.schedule();fitAll();}
 }
 function goHome() {
   busy || setScreen("home");
@@ -567,6 +606,7 @@ async function newGame(i = mode, t = false, saved = null) {
     });
     const restoredPuzzle = saved ? restore(n, saved) : null;
     if (e !== loadToken) return;
+    highlights.clear();renderHighlights();
     (disposeScene(),
       (data = n),
       (mode = i),
@@ -613,6 +653,7 @@ async function newGame(i = mode, t = false, saved = null) {
       );
       ((c.userData.piece = s), meshRoot.add(c), meshes.set(s.id, c));
     }
+    regionPalette=regionColors(data,themes[themeName]);
     physics = new Physics(puzzle, bounds, seed);
     slices.setData(meshes,bounds,puzzle);updateBoardBoundary();
     ((physics.gravity = true),
@@ -636,7 +677,7 @@ async function newGame(i = mode, t = false, saved = null) {
       ($("level-description").textContent =
         data.pieces.length +
         " pieces \xB7 " +
-        { easy: "Shallows", medium: "Open water", hard: "The deep" }[mode]),
+        { easy: "Easy", medium: "Medium", hard: "Hard" }[mode]),
       ($("seed-label").textContent =
         "SESSION " + seed.toString(16).toUpperCase()),
       (busy = false),
@@ -698,13 +739,13 @@ function pointerRay(i) {
     raycaster.setFromCamera(pointer, camera));
 }
 function pick(i) {
-  return (
-    pointerRay(i),
-    raycaster.intersectObjects(
-      [...meshes.values()].filter((t) => t.visible),
-      false,
-    )[0]
-  );
+  pointerRay(i);
+  const hits=raycaster.intersectObjects([...meshes.values()].filter(m=>m.visible),false);
+  if($("xray").checked){
+    const highlighted=hits.find(h=>h.object.userData.piece.id===selected || highlights.has(h.object.userData.piece.id));
+    if(highlighted)return highlighted;
+  }
+  return hits[0];
 }
 function canInteract() {
   return (
@@ -813,6 +854,7 @@ $("start-game").onclick = () => {
 for (const i of document.querySelectorAll("[data-mode]"))
   i.onclick = () => {
     chosenMode = i.dataset.mode;
+    updatePreview(chosenMode,true);
     for (const t of document.querySelectorAll("[data-mode]"))
       (t.classList.toggle("active", t === i),
         t.setAttribute("aria-pressed", String(t === i)));
@@ -856,23 +898,17 @@ $("next").onclick = () => {
   (select(i[(t + 1) % i.length].id), focusSelected());
 };
 $("region-search").oninput = (i) => {
-  const t = i.target.value.trim().toLowerCase();
-  if (($("search-results").replaceChildren(), !t || busy)) return;
-  const e = data.pieces
-    .filter((n) =>
-      (n.name + " " + n.acronym + " " + n.id).toLowerCase().includes(t),
-    )
-    .slice(0, 35);
-  for (const n of e) {
-    const r = document.createElement("button");
-    ((r.textContent = n.name),
-      (r.onclick = () => {
-        physics.intro || ($("xray").checked=true,select(n.id), focusSelected());
-      }),
-      $("search-results").appendChild(r));
+  const query=i.target.value.trim().toLowerCase();$("search-results").replaceChildren();
+  if(!query || busy || !data)return;
+  const matches=data.pieces.filter(p=>(p.name+' '+p.acronym+' '+p.id).toLowerCase().includes(query)).slice(0,35);
+  for(const p of matches){
+    const b=document.createElement('button');b.textContent=p.name;b.setAttribute('aria-pressed',String(highlights.has(p.id)));
+    b.onclick=()=>{if(physics.intro)return;highlights.add(p.id);$("xray").checked=true;select(p.id);renderHighlights();b.setAttribute('aria-pressed','true');focusSelected();};
+    $("search-results").append(b);
   }
-  e.length || ($("search-results").textContent = "No matching region.");
+  if(!matches.length)$("search-results").textContent='No matching region.';
 };
+$("clear-highlights").onclick=()=>{highlights.clear();renderHighlights();stylePieces();slices.schedule();};
 $("guide").onchange = () => {
   ($("guide").checked && (assisted = true), refreshGhost());
 };
@@ -1127,5 +1163,22 @@ if (import.meta.env.DEV && new URLSearchParams(location.search).has("test")) {
     saveSession,
     get slices(){return slices;},
     get party(){return party;},
+    get highlights(){return highlights;},
+    get theme(){return themeName;},
   };
 }
+
+$("theme").onchange=e=>applyTheme(e.target.value);
+try{themeName=storage?.getItem('brain-party-theme')||'sand';}catch{}
+applyTheme(themeName);$("theme").value=themeName;
+for(const button of document.querySelectorAll('[data-mode]')){
+  button.onpointerenter=button.onfocus=()=>updatePreview(button.dataset.mode,true);
+  button.onpointerleave=button.onblur=()=>updatePreview(chosenMode,false);
+}
+let previewCycle;
+$("difficulty-label").onpointerenter=()=>{let n=0;updatePreview('easy',true);previewCycle=setInterval(()=>updatePreview(['easy','medium','hard'][++n%3],true),1600);};
+$("difficulty-label").onpointerleave=()=>{clearInterval(previewCycle);updatePreview(chosenMode,false);};
+// Preserve the session when the GPU context is interrupted; restore UI state
+// after Three.js recreates its resources instead of leaving a frozen canvas.
+renderer.domElement.addEventListener('webglcontextlost',e=>{e.preventDefault();saveSession();setPause(true);toast('Graphics paused. Your puzzle is saved.');});
+renderer.domElement.addEventListener('webglcontextrestored',()=>{resize();if(hasGame){updatePositions();stylePieces();fitAll();}toast('Graphics restored. Resume when ready.');});
