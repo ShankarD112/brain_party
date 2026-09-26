@@ -82,12 +82,12 @@
       />
       <div id="search-results"></div>
       <div class="selection">
-        <span class="eyebrow" id="selection-tag">YOUR REFERENCE PIECE</span>
+        <span class="eyebrow" id="selection-tag">SELECTED REGION</span>
         <h2 id="region-name">Loading the atlas…</h2>
         <p id="region-path">Preparing anatomical surfaces</p>
         <div id="region-detail"></div>
         <button id="focus">Focus selected <kbd>F</kbd></button
-        ><button id="next">Find an unplaced piece</button>
+        ><button id="next">Find a loose piece</button>
       </div>
       <div class="physics-controls">
         <label
@@ -119,9 +119,24 @@
       <button id="shuffle" class="primary">
         Shuffle loose pieces <span>⤨</span>
       </button>
-      <p class="shuffle-note">Connected pieces stay exactly where they are.</p>
+      <p class="shuffle-note">Shuffle leaves connected clusters untouched.</p>
       <p class="small" id="seed-label"></p>
       <p id="save-status" role="status">Progress saves on this browser</p>
+    </aside>
+    <button id="slices-toggle" class="game-ui" aria-controls="slice-panel" aria-expanded="false">2D slices</button>
+    <aside id="slice-panel" class="slice-panel game-ui" aria-label="Linked anatomical slice viewer">
+      <div class="slice-heading"><div><span class="eyebrow">YOUR ASSEMBLY · IN SECTION</span><h2>Inside the brain</h2></div></div>
+      <label for="slice-axis">Section plane</label>
+      <select id="slice-axis"><option value="2">Coronal</option><option value="0">Sagittal</option><option value="1">Horizontal</option></select>
+      <p id="slice-orientation">Dorsal ↑ · Left–right ↔</p>
+      <canvas id="slice-canvas" width="600" height="500" aria-label="Anatomical sections of joined and selected regions"></canvas>
+      <label for="slice-depth">Explore slices</label><input id="slice-depth" type="range" min="-6" max="6" step="0.025" value="0">
+      <output id="slice-location" for="slice-depth"></output>
+      <button id="slice-focus">Find selected in 2D</button>
+      <label class="slice-option"><input type="checkbox" id="slice-plane"> Show this plane on selected 3D cluster</label>
+      <label class="slice-option"><input type="checkbox" id="xray" checked> Fade other regions in selected cluster</label>
+      <p id="slice-caption" aria-live="polite">Connect any neighbors to fill your anatomical reference.</p>
+      <small>Mesh-derived cross-sections in atlas position. Faint outlines show the remaining anatomy; this is not raw tissue imaging.</small>
     </aside>
     <div class="stats game-ui">
       <div class="completion-block">
@@ -141,7 +156,7 @@
         </div>
         <div class="completion-detail">
           <span id="progress-detail">0 connections</span
-          ><span id="docked-count">0 regions docked</span>
+          ><span id="docked-count">0 regions joined</span>
         </div>
       </div>
       <div class="time-block">
@@ -162,6 +177,7 @@
       ><button id="brain-view">View brain</button
       ><button id="hint">Guide selected</button>
     </div>
+    <div id="party-banner" class="party-banner" hidden role="status"><strong>Brain Part(s)y! 🎉</strong><span>A dorsal-side headspin, just for you.</span><button id="stop-party">Explore the brain</button></div>
     <div id="tooltip" hidden></div>
     <div id="toast" role="status" aria-live="polite"></div>
     <footer class="game-ui">
@@ -204,8 +220,7 @@
         </li>
         <li>
           <b>Gravity starts on.</b> Released pieces and floating clusters settle
-          on the floor. Turn it off to hold lifted pieces in midair. The floor
-          remains solid in either mode.
+          on the floor. Turn it off for a slow upward drift: smaller regions rise faster. The floor and play-area boundary remain solid in either mode.
         </li>
         <li>
           <b>Height assist</b> matches vertical placement when a true neighbor
@@ -214,8 +229,7 @@
         </li>
         <li>
           A <b>sparkle and confirmation</b> mean a correct connection. Joined
-          pieces stay together and move as one. The largest reference region
-          stays anchored.
+          pieces stay together and move as one. Every cluster remains movable. Start with any neighboring pair.
         </li>
         <li>
           <b>Shuffle loose pieces</b> moves only unconnected pieces. Joined
@@ -224,8 +238,7 @@
       </ul>
       <p>
         The completion bar counts connections, including floating clusters. The
-        smaller docked count shows how many regions have joined the anchored
-        brain. Every piece must be connected to finish.
+        joined-region count shows how many regions belong to a connected cluster. Every piece must be connected to finish.
       </p>
       <p>
         The timer starts on your first move or shuffle after the opening. Menu
@@ -240,7 +253,7 @@
       <h2>Beautifully connected.</h2>
       <p id="completion-text"></p>
       <button id="play-again" class="primary">Choose another voyage ↗</button
-      ><button id="inspect-complete">Explore completed brain</button>
+      ><button id="inspect-complete">Explore completed brain</button><button id="replay-party">Replay the party</button>
     </dialog>
     <div id="paused" class="overlay" hidden>
       <div>

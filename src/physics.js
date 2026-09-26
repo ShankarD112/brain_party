@@ -16,6 +16,8 @@ class Physics {
       (this.age = 0),
       (this.intro = true),
       (this.phase = "assembled"),
+      (this.maxVolume = Math.max(...t.data.pieces.map(p => p.voxels))),
+      (this.arenaHalf = null),
       (this.targets = this.scatter(n)),
       (this.exploded = /* @__PURE__ */ new Map()));
     for (const r of t.data.pieces) {
@@ -27,6 +29,11 @@ class Physics {
         (s[2] / a) * 3.2,
       ]);
     }
+    this.arenaHalf = Math.max(16, ...[...this.targets].flatMap(([id, offset]) => {
+      const b = this.bounds.get(id);
+      return [Math.abs(b.min[0]+offset[0])+2, Math.abs(b.max[0]+offset[0])+2,
+              Math.abs(b.min[2]+offset[2])+2, Math.abs(b.max[2]+offset[2])+2];
+    }));
     for (const r of t.groups.values()) r.offset = [0, 0, 0];
   }
   floorOffset(t) {
@@ -51,7 +58,7 @@ class Physics {
       r = /* @__PURE__ */ new Map(),
       s = [],
       a = [...this.puzzle.groups.values()].filter(
-        (c) => !c.anchored && (!e || c.members.size === 1),
+        (c) => (!e || c.members.size === 1),
       );
     for (const c of this.puzzle.groups.values())
       if (!a.includes(c)) {
@@ -68,7 +75,7 @@ class Physics {
         this.bounds.get([...l.members][0]).area -
         this.bounds.get([...c.members][0]).area,
     );
-    let o = 14 + Math.sqrt(a.length) * 1.7;
+    let o = this.arenaHalf ? this.arenaHalf - 4 : 6 + Math.sqrt(a.length) * 0.65;
     for (const c of a) {
       const l = [...c.members][0],
         u = this.bounds.get(l),
@@ -78,12 +85,13 @@ class Physics {
         g = (u.max[2] - u.min[2]) / 2 + 0.4;
       let x;
       for (let p = 0; !x; p++) {
-        p && p % 250 === 0 && (o *= 1.15);
+        if (p > 4000 && this.arenaHalf) { x = {x:d+c.offset[0],z:f+c.offset[2],w:m,d:g}; break; }
+        if (!this.arenaHalf && p && p % 250 === 0) o *= 1.08;
         const h = n() * Math.PI * 2,
-          A = 9 + Math.sqrt(n()) * o,
+          A = Math.sqrt(n()) * o,
           b = Math.cos(h) * A,
           y = Math.sin(h) * A;
-        s.every(
+        ( !this.arenaHalf || (Math.abs(b)+m <= this.arenaHalf && Math.abs(y)+g <= this.arenaHalf)) && s.every(
           (R) => Math.abs(b - R.x) >= m + R.w || Math.abs(y - R.z) >= g + R.d,
         ) && (x = { x: b, z: y, w: m, d: g });
       }
@@ -93,7 +101,7 @@ class Physics {
   }
   skipIntro() {
     for (const t of this.puzzle.groups.values())
-      (t.anchored || (t.offset = [...this.targets.get(t.id)]),
+      ((t.offset = [...this.targets.get(t.id)]),
         this.velocity.set(t.id, 0));
     ((this.intro = false), (this.phase = "ready"));
   }
@@ -123,7 +131,6 @@ class Physics {
                 ? "tornado"
                 : "fall";
         for (const s of this.puzzle.groups.values()) {
-          if (s.anchored) continue;
           const a = [...s.members][0],
             o = this.exploded.get(a),
             c = this.targets.get(s.id);
@@ -148,25 +155,24 @@ class Physics {
         r >= 6.7 &&
           ([...this.puzzle.groups.values()].every(
             (s) =>
-              s.anchored || Math.abs(s.offset[1] - this.floorOffset(s)) < 1e-3,
+              Math.abs(s.offset[1] - this.floorOffset(s)) < 1e-3,
           ) ||
             r > 11) &&
           this.skipIntro();
         return;
       }
       for (const r of this.puzzle.groups.values()) {
-        if (r.anchored) {
-          r.offset = [0, 0, 0];
-          continue;
-        }
         if ([...r.members].some((s) => e.has(s))) {
           this.velocity.set(r.id, 0);
           continue;
         }
-        this.gravity
-          ? this.fall(r, t)
-          : (this.velocity.set(r.id, 0),
-            (r.offset[1] = Math.max(r.offset[1], this.floorOffset(r))));
+        if (this.gravity) this.fall(r, t);
+        else {
+          this.velocity.set(r.id, 0);
+          const room = Math.max(0, this.floorOffset(r) + 8 - r.offset[1]);
+          r.offset[1] += this.driftSpeed(r) * t * Math.min(1, room);
+        }
+        r.offset = this.constrain(r, r.offset);
       }
     }
   }
@@ -178,15 +184,25 @@ class Physics {
         ? ((t.offset[1] = r), this.velocity.set(t.id, 0))
         : this.velocity.set(t.id, n));
   }
-  move(t, e) {
-    const n = this.puzzle.group(t);
-    n.anchored ||
-      (this.puzzle.move(t, [e[0], Math.max(e[1], this.floorOffset(n)), e[2]]),
-      this.velocity.set(n.id, 0));
+  driftSpeed(group) {
+    const volume = [...group.members].reduce((sum,id) => sum + this.pieces.get(id).voxels, 0);
+    return 0.08 + 0.45 * (1 - Math.min(1, Math.cbrt(volume / this.maxVolume)));
+  }
+  constrain(group, offset) {
+    const local = this.groupBounds({...group, offset:[0,0,0]});
+    const result = [...offset];
+    for (const axis of [0,2]) result[axis] = Math.max(-this.arenaHalf-local.min[axis], Math.min(this.arenaHalf-local.max[axis], result[axis]));
+    result[1] = Math.max(this.floorOffset(group), Math.min(this.floorOffset(group)+10, result[1]));
+    return result;
+  }
+  move(id, offset) {
+    const group = this.puzzle.group(id);
+    this.puzzle.move(id, this.constrain(group, offset));
+    this.velocity.set(group.id, 0);
   }
   candidate(t, e) {
     const n = this.puzzle.group(t);
-    return n.anchored || this.intro
+    return this.intro
       ? null
       : [...this.puzzle.groups.values()]
           .filter(
@@ -200,20 +216,22 @@ class Physics {
                   )
                 : distance(n.offset, r.offset)) <= e,
           )
-          .sort((r, s) => Number(s.anchored) - Number(r.anchored))[0] || null;
+          .sort((r,s) => distance(n.offset,r.offset)-distance(n.offset,s.offset))[0] || null;
   }
   snap(t, e) {
     const n = this.puzzle.group(t),
       r = this.candidate(t, e);
     if (!r) return 0;
     if (this.heightAssist) {
-      const a = r.anchored
-        ? 0
-        : Math.max(this.floorOffset(n), this.floorOffset(r));
-      ((n.offset[1] = a), r.anchored || (r.offset[1] = a));
+      // Align vertically with the target cluster without pinning either one.
+      const a = Math.max(this.floorOffset(n), this.floorOffset(r), r.offset[1]);
+      n.offset[1] = a; r.offset[1] = a;
     }
     const s = this.puzzle.snap(t, e);
-    return (this.velocity.set(this.puzzle.group(t).id, 0), s);
+    const merged = this.puzzle.group(t);
+    merged.offset = this.constrain(merged, merged.offset);
+    this.velocity.set(merged.id,0);
+    return s;
   }
   shuffle(t) {
     if (this.intro) return 0;
@@ -237,3 +255,4 @@ class Physics {
   }
 }
 export { Physics };
+

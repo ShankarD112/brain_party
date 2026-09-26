@@ -1,3 +1,5 @@
+import { SliceViewer } from "./slices.js";
+import { BrainParty } from "./party.js";
 import { loadAtlas } from "./atlas.js";
 import { snapshot, readSave, restore, writeSave, SAVE_KEY } from "./session.js";
 import {
@@ -25,6 +27,10 @@ import {
   Points,
   PointsMaterial,
   Box3,
+  EdgesGeometry,
+  LineSegments,
+  LineBasicMaterial,
+  BoxGeometry,
 } from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { Puzzle } from "./puzzle.js";
@@ -126,6 +132,15 @@ const meshes = /* @__PURE__ */ new Map(),
   pointer = new Vector2(),
   dragPlane = new Plane(),
   hitPoint = new Vector3();
+const slices = new SliceViewer(scene, id => { select(id, true); focusSelected(); });
+const party = new BrainParty(meshRoot);
+let boardBoundary;
+function updateBoardBoundary() {
+  if(boardBoundary){scene.remove(boardBoundary);boardBoundary.geometry.dispose();boardBoundary.material.dispose();}
+  boardBoundary = new LineSegments(new EdgesGeometry(new BoxGeometry(physics.arenaHalf*2,.06,physics.arenaHalf*2)),new LineBasicMaterial({color:'#62ad9f',transparent:true,opacity:.55}));
+  boardBoundary.position.y=physics.floor+.05;scene.add(boardBoundary);
+  controls.maxDistance=physics.arenaHalf*5;
+}
 let storage;
 try {
   storage = window.localStorage;
@@ -140,8 +155,8 @@ try {
 } catch {}
 const tutorialSteps = [
   [
-    "Meet your reference",
-    "The glowing reference region stays fixed. Bring its real anatomical neighbors back to the brain.",
+    "Start with any neighbors",
+    "No piece is fixed. Join any neighboring pair, then move that cluster to the next one. Joined regions keep their anatomical arrangement.",
   ],
   [
     "Choose and move a region",
@@ -152,8 +167,8 @@ const tutorialSteps = [
     "A nearby correct neighbor glows gold. Release to connect. Height assist handles vertical alignment; a placement guide can show the target.",
   ],
   [
-    "Come back any time",
-    "Your puzzle saves on this browser every few seconds. Use Main menu to pause, then Resume voyage. Shuffle moves only loose, unconnected pieces.",
+    "Explore inside and come back",
+    "Use 2D slices to explore joined regions. Selecting a region highlights it in both views. Your puzzle saves on this browser; shuffle only moves loose pieces.",
   ],
 ];
 function saveSession() {
@@ -235,6 +250,8 @@ function clearEffects() {
   ((sparks.length = 0), effectRoot.clear());
 }
 function disposeScene() {
+  party.reset();
+  $("party-banner").hidden=true;
   (clearGhost(), clearEffects());
   for (const i of meshes.values()) (i.geometry.dispose(), i.material.dispose());
   (meshes.clear(), bounds.clear(), meshRoot.clear());
@@ -243,6 +260,7 @@ function updatePositions() {
   for (const [i, t] of meshes)
     (t.position.fromArray(t.userData.piece.center),
       hasGame && t.position.add(new Vector3(...puzzle.group(i).offset)));
+  if(hasGame && puzzle){slices.updatePlane();if(completed)party.follow(puzzle.group(data.pieces[0].id).offset);}
 }
 function refreshGhost() {
   if ((clearGhost(), !(!puzzle || selected === void 0 || !$("guide").checked)))
@@ -262,37 +280,24 @@ function refreshGhost() {
     }
 }
 function stylePieces() {
-  if (!puzzle) return;
-  const i = selected === void 0 ? null : puzzle.group(selected),
-    t = /* @__PURE__ */ new Set();
-  if (i)
-    for (const e of i.members)
-      for (const n of puzzle.neighbors.get(e)) t.add(n);
-  for (const [e, n] of meshes) {
-    const r = puzzle.group(e);
-    ((n.visible = !$("spotlight").checked || r === i || t.has(e) || r.anchored),
-      n.material.emissive.set(
-        r === snapCandidate
-          ? "#816520"
-          : r === i
-            ? "#20564b"
-            : e === hovered
-              ? "#274955"
-              : r.anchored
-                ? "#153528"
-                : "#000000",
-      ),
-      (n.material.emissiveIntensity =
-        r === snapCandidate ? 0.8 : r === i ? 0.6 : 0.3));
+  if(!puzzle)return;
+  const group=selected===undefined?null:puzzle.group(selected), neighbors=new Set();
+  if(group)for(const id of group.members)for(const n of puzzle.neighbors.get(id))neighbors.add(n);
+  for(const [id,mesh] of meshes) {
+    const g=puzzle.group(id), chosen=id===selected;
+    mesh.visible=!$("spotlight").checked || g===group || neighbors.has(id);
+    const faded=$("xray").checked && group?.members.size>1 && g===group && !chosen && !party.active;
+    mesh.material.transparent=faded;mesh.material.opacity=faded?.14:1;mesh.material.depthWrite=!faded;
+    mesh.renderOrder=chosen?2:faded?1:0;
+    mesh.material.emissive.set(chosen?'#43bda3':g===snapCandidate?'#816520':id===hovered?'#274955':'#000000');
+    mesh.material.emissiveIntensity=chosen?.7:g===snapCandidate?.8:.25;
   }
 }
-function select(i) {
+function select(i, keepSlice = false) {
   ((selected = i), (snapCandidate = null));
   const t = meshes.get(i).userData.piece,
     e = puzzle.group(i);
-  (($("selection-tag").textContent = e.anchored
-    ? "ANCHORED REFERENCE"
-    : e.members.size > 1
+  (($("selection-tag").textContent = e.members.size > 1
       ? "CONNECTED CLUSTER \xB7 " + e.members.size + " REGIONS"
       : "SELECTED REGION"),
     ($("region-name").textContent = t.name),
@@ -304,9 +309,10 @@ function select(i) {
       " \xB7 " +
       (t.voxels * 0.025 ** 3).toFixed(3) +
       " mm\xB3"),
-    ($("height-control").disabled = e.anchored),
+    ($("height-control").disabled = false),
     stylePieces(),
     refreshGhost());
+  slices.select(i, keepSlice);
 }
 function progress() {
   const i = data.pieces.length,
@@ -324,12 +330,12 @@ function progress() {
       t + " percent complete",
     ),
     ($("docked-count").textContent =
-      puzzle.placed + " / " + i + " regions in the brain"),
+      puzzle.placed + " / " + i + " regions joined"),
     ($("status").textContent = completed
       ? "Brain complete \u2014 every region connected"
       : i -
         puzzle.placed +
-        " regions to dock \xB7 " +
+        " loose regions \xB7 " +
         puzzle.groups.size +
         " clusters"));
 }
@@ -358,8 +364,9 @@ function finish() {
   (($("completion-text").textContent =
     `${data.pieces.length} regions, ${physics.requiredConnections} connections, ${clock(elapsed)}. ${assisted ? "Assisted" : "Manual"} run.${elapsed < t ? " A new personal best!" : ""}`),
     clearSession(),
-    $("complete-dialog").showModal(),
     progress());
+  slices.schedule();
+  startParty();
 }
 function sparkle(i) {
   const t = reducedMotion ? 16 : 56,
@@ -425,8 +432,7 @@ function attemptSnap() {
   if (
     !physics ||
     physics.intro ||
-    selected === void 0 ||
-    puzzle.group(selected).anchored
+    selected === void 0 || party.active
   )
     return;
   const i = physics.snap(selected, snapTolerance());
@@ -436,6 +442,7 @@ function attemptSnap() {
     sparkle(meshes.get(selected).position),
     select(selected),
     progress(),
+    slices.schedule(),
     $("completion-track").classList.remove("just-snapped"),
     $("completion-track").offsetWidth,
     $("completion-track").classList.add("just-snapped"),
@@ -466,6 +473,7 @@ function fitAll() {
     controls.update());
 }
 function viewBrain() {
+  if (hasGame && selected !== undefined) { focusSelected(); return; }
   (controls.target.set(0, 0, 0),
     camera.position.set(15, 16, 19),
     controls.update());
@@ -481,6 +489,9 @@ function focusSelected() {
     controls.update());
 }
 function setScreen(i) {
+  if(party.active)party.stop();
+  if(boardBoundary)boardBoundary.visible=i === "play";
+  if(i === "home"){slices.plane.visible=false;$("complete-dialog").close();}
   if (i === "home") saveSession();
   ((screen = i),
     document.body.classList.toggle("at-home", i === "home"),
@@ -593,7 +604,9 @@ async function newGame(i = mode, t = false, saved = null) {
       );
       ((c.userData.piece = s), meshRoot.add(c), meshes.set(s.id, c));
     }
-    ((physics = new Physics(puzzle, bounds, seed)),
+    physics = new Physics(puzzle, bounds, seed);
+    slices.setData(meshes,bounds,puzzle);updateBoardBoundary();
+    ((physics.gravity = true),
       (floorRoot.position.y = physics.floor),
       (grid.position.y = 0.045),
       (brainRing.position.y = 0.05),
@@ -607,9 +620,7 @@ async function newGame(i = mode, t = false, saved = null) {
       !t && reducedMotion && physics.skipIntro(),
       updatePositions(),
       select(
-        data.pieces
-          .filter((s) => puzzle.group(s.id).anchored)
-          .sort((s, a) => a.voxels - s.voxels)[0].id,
+        data.pieces[0].id,
       ),
       progress(),
       ($("timer").textContent = "00:00"),
@@ -634,6 +645,8 @@ async function newGame(i = mode, t = false, saved = null) {
       physics.skipIntro();
       puzzle = restoredPuzzle;
       physics.puzzle = puzzle;
+      slices.puzzle = puzzle;
+      for(const g of puzzle.groups.values())g.offset=physics.constrain(g,g.offset);
       physics.velocity.clear();
       seed = saved.seed;
       elapsed = saved.elapsed;
@@ -690,7 +703,7 @@ function canInteract() {
     !paused &&
     !document.querySelector("dialog[open]") &&
     screen === "play" &&
-    !physics.intro
+    !physics.intro && !party.active
   );
 }
 renderer.domElement.addEventListener(
@@ -699,12 +712,7 @@ renderer.domElement.addEventListener(
     if (!canInteract() || i.button !== 0) return;
     const t = pick(i);
     if (t) {
-      if (
-        (select(t.object.userData.piece.id), puzzle.group(selected).anchored)
-      ) {
-        toast("This cluster is anchored. Bring a loose neighbor to it.");
-        return;
-      }
+      select(t.object.userData.piece.id);
       ((controls.enabled = false),
         i.stopImmediatePropagation(),
         renderer.domElement.setPointerCapture(i.pointerId),
@@ -770,7 +778,6 @@ function setPause(i) {
   if (i) saveSession();
   busy ||
     !hasGame ||
-    completed ||
     ((paused = i),
     ($("paused").hidden = !i),
     keys.clear(),
@@ -811,7 +818,7 @@ $("gravity").onchange = () => {
     toast(
       physics.gravity
         ? "Gravity on \u2014 loose clusters settle on the ground."
-        : "Gravity off \u2014 lifted pieces stay where you leave them.",
+        : "Gravity off \u2014 smaller regions drift upward faster.",
     ));
 };
 $("height-assist").onchange = () => {
@@ -834,7 +841,7 @@ $("overview").onclick = fitAll;
 $("brain-view").onclick = viewBrain;
 $("next").onclick = () => {
   if (!canInteract()) return;
-  const i = data.pieces.filter((e) => !puzzle.group(e.id).anchored);
+  const i = data.pieces.filter((e) => puzzle.group(e.id).members.size === 1);
   if (!i.length) return;
   const t = i.findIndex((e) => e.id === selected);
   (select(i[(t + 1) % i.length].id), focusSelected());
@@ -851,7 +858,7 @@ $("region-search").oninput = (i) => {
     const r = document.createElement("button");
     ((r.textContent = n.name),
       (r.onclick = () => {
-        physics.intro || (select(n.id), focusSelected());
+        physics.intro || ($("xray").checked=true,select(n.id), focusSelected());
       }),
       $("search-results").appendChild(r));
   }
@@ -879,7 +886,7 @@ $("play-again").onclick = () => {
   ($("complete-dialog").close(), goHome());
 };
 $("inspect-complete").onclick = () => {
-  ($("complete-dialog").close(), viewBrain());
+  ($("complete-dialog").close(), fitAll());
 };
 for (const [i, t] of [
   ["lift-up", 1],
@@ -937,7 +944,7 @@ function resize() {
     camera.setViewOffset(
       innerWidth,
       innerHeight,
-      -(innerWidth > 760 ? 120 : 55),
+      -(innerWidth > 1100 ? 0 : innerWidth > 760 ? 120 : 0),
       0,
       innerWidth,
       innerHeight,
@@ -968,8 +975,7 @@ function animate(i) {
   if (
     !physics.intro &&
     r &&
-    selected !== void 0 &&
-    !puzzle.group(selected).anchored
+    selected !== void 0 && !party.active
   ) {
     const a = (keys.has("shift") ? 0.4 : 3) * e,
       o = new Vector3(),
@@ -990,11 +996,14 @@ function animate(i) {
         ),
         updateFitCue()));
   }
+  // Keep camera navigation within reach of the bounded board as well.
+  controls.target.x=Math.max(-physics.arenaHalf,Math.min(physics.arenaHalf,controls.target.x));
+  controls.target.z=Math.max(-physics.arenaHalf,Math.min(physics.arenaHalf,controls.target.z));
   const s = /* @__PURE__ */ new Set();
   if (
     (drag && s.add(drag.id),
     r && s.add(selected),
-    physics.tick(e, s),
+    !party.active && physics.tick(e, s),
     updatePositions(),
     n)
   ) {
@@ -1014,8 +1023,30 @@ function animate(i) {
         "Drag across the ground. E lifts, Q lowers. Nearby correct neighbors glow.",
       ));
   }
+  party.tick(e);
+  if(party.active)slices.plane.visible=false;
   (updateEffects(e), controls.update(), renderer.render(scene, camera));
 }
+function startParty() {
+  $("complete-dialog").close();
+  $("party-banner").hidden=false;
+  $("guide").checked=false;$("xray").checked=false;refreshGhost();
+  party.initialOffset=null;
+  party.start(physics.floor,reducedMotion,()=>{
+    $("party-banner").hidden=true;
+    updatePositions();stylePieces();slices.schedule();fitAll();
+    $("complete-dialog").showModal();
+  });
+  stylePieces();fitAll();
+}
+$("stop-party").onclick=()=>{party.stop();$("complete-dialog").close();};
+$("replay-party").onclick=startParty;
+$("xray").onchange=()=>{stylePieces();slices.schedule();};
+$("slices-toggle").onclick=()=>{
+  const open=document.body.classList.toggle('slices-open');
+  if(open){document.body.classList.remove("panel-open");$("panel-toggle").setAttribute("aria-expanded","false");}
+  $("slices-toggle").setAttribute('aria-expanded',String(open));slices.schedule();
+};
 requestAnimationFrame(animate);
 busy = false;
 $("loading").hidden = true;
@@ -1038,6 +1069,7 @@ $("cancel-load").onclick = () => {
 };
 $("panel-toggle").onclick = () => {
   const open = document.body.classList.toggle("panel-open");
+  if(open){document.body.classList.remove("slices-open");$("slices-toggle").setAttribute("aria-expanded","false");}
   $("panel-toggle").setAttribute("aria-expanded", String(open));
 };
 setInterval(saveSession, 5000);
@@ -1075,5 +1107,8 @@ if (import.meta.env.DEV && new URLSearchParams(location.search).has("test")) {
     attemptSnap,
     updatePositions,
     saveSession,
+    get slices(){return slices;},
+    get party(){return party;},
   };
 }
+

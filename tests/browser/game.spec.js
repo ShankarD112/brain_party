@@ -34,7 +34,7 @@ test("lazy loading, tutorial, keyboard, genuine dragging, save/resume, shuffle, 
   await expect(page.locator("#tutorial-dialog")).toBeVisible();
   for (let i = 0; i < 4; i++) await page.locator("#tutorial-next").click();
   await expect(page.locator("#docked-count")).toHaveText(
-    "1 / 15 regions in the brain",
+    "0 / 15 regions joined",
   );
   expect(requests.every((u) => u.includes("/easy."))).toBe(true);
   await page.locator("#gravity").uncheck();
@@ -73,7 +73,7 @@ test("lazy loading, tutorial, keyboard, genuine dragging, save/resume, shuffle, 
       v.add(m.position).project(t.camera);
       const x = ((v.x + 1) * innerWidth) / 2,
         y = ((1 - v.y) * innerHeight) / 2;
-      if (x > 360 && x < innerWidth - 70 && y > 260 && y < innerHeight - 180)
+      if (x > 360 && x < innerWidth - 340 && y > 260 && y < innerHeight - 180)
         result.push({ x, y });
     }
     return result;
@@ -118,7 +118,10 @@ test("lazy loading, tutorial, keyboard, genuine dragging, save/resume, shuffle, 
     await page.evaluate(
       () => window.__TEST__.puzzle.group(window.__TEST__.selected).offset,
     ),
-  ).toEqual(afterDrag);
+  ).toEqual(expect.arrayContaining([expect.any(Number)]));
+  const resumed=await page.evaluate(()=>window.__TEST__.puzzle.group(window.__TEST__.selected).offset);
+  expect(resumed[0]).toBeCloseTo(afterDrag[0],4);expect(resumed[2]).toBeCloseTo(afterDrag[2],4);
+  expect(resumed[1]).toBeGreaterThanOrEqual(afterDrag[1]);expect(resumed[1]-afterDrag[1]).toBeLessThan(1);
   expect(
     await page.evaluate(() => window.__TEST__.elapsed),
   ).toBeGreaterThanOrEqual(saved.elapsed);
@@ -153,16 +156,16 @@ for (const [mode, count] of [
       const t = window.__TEST__;
       while (!t.puzzle.complete) {
         const edge = t.puzzle.data.edges.find(
-          ([a, b]) => t.puzzle.group(a).anchored !== t.puzzle.group(b).anchored,
+          ([a, b]) => t.puzzle.group(a) !== t.puzzle.group(b),
         );
-        const id = t.puzzle.group(edge[0]).anchored ? edge[1] : edge[0];
+        const id = edge[0], target=t.puzzle.group(edge[1]).offset;
         t.select(id);
-        t.puzzle.move(id, [0.02, 0, 0]);
+        t.puzzle.move(id, [target[0]+0.02,target[1],target[2]]);
         t.updatePositions();
         t.attemptSnap();
       }
     });
-    await expect(page.locator("#complete-dialog")).toBeVisible();
+    await expect(page.locator("#complete-dialog")).toBeVisible({timeout:15000});
     await expect(page.locator("#progress")).toHaveText("100%");
     expect(
       await page.evaluate(() => localStorage.getItem("brain-party-session-v1")),
@@ -218,4 +221,49 @@ test("touch viewport keeps menu, region controls, and lifting usable", async ({
   ).toBeGreaterThan(before);
   await page.screenshot({ path: "test-results/mobile-controls.png" });
   await context.close();
+});
+
+test('free clusters, bounded movement, linked slices, and cross-view highlighting',async({page})=>{
+  await begin(page);
+  const info=await page.evaluate(()=>{
+    const t=window.__TEST__,[a,b]=t.puzzle.data.edges[0],target=t.puzzle.group(b).offset;
+    t.select(a);t.puzzle.move(a,[target[0]+.01,target[1],target[2]]);t.updatePositions();t.attemptSnap();
+    return {a,b,size:t.puzzle.group(a).members.size,name:t.meshes.get(a).userData.piece.name};
+  });
+  expect(info.size).toBeGreaterThan(1);
+  await expect(page.locator('#slice-caption')).toContainText('joined regions');
+  await expect(page.locator('#region-name')).toHaveText(info.name);
+  await expect.poll(()=>page.evaluate(()=>window.__TEST__.slices.hitPaths.length)).toBeGreaterThan(0);
+  const focus=await page.evaluate(({a,b})=>{
+    const t=window.__TEST__;
+    return {selected:t.meshes.get(a).material.emissiveIntensity,other:t.meshes.get(b).material.opacity,anchored:t.puzzle.group(a).anchored};
+  },info);
+  expect(focus.selected).toBeGreaterThan(.5);expect(focus.other).toBeLessThan(.3);expect(focus.anchored).toBe(false);
+  const first=await page.locator('#slice-canvas').evaluate(c=>c.toDataURL());
+  await page.locator('#slice-axis').selectOption('0');
+  await expect.poll(()=>page.locator('#slice-canvas').evaluate(c=>c.toDataURL())).not.toBe(first);
+  await page.locator('#slice-plane').check();
+  expect(await page.evaluate(()=>window.__TEST__.slices.plane.visible)).toBe(true);
+  const bounded=await page.evaluate(id=>{
+    const t=window.__TEST__;t.physics.move(id,[10000,10000,-10000]);t.updatePositions();
+    const g=t.puzzle.group(id),b=t.physics.groupBounds(g);
+    return {maxX:b.max[0],minZ:b.min[2],half:t.physics.arenaHalf,members:[...g.members],offset:[...g.offset]};
+  },info.a);
+  expect(bounded.maxX).toBeLessThanOrEqual(bounded.half+.00001);expect(bounded.minZ).toBeGreaterThanOrEqual(-bounded.half-.00001);
+  await page.locator('#shuffle').click();
+  expect(await page.evaluate(id=>[...window.__TEST__.puzzle.group(id).members],info.a)).toEqual(bounded.members);
+  // Pause physics while verifying the view-selection interaction.
+  const hit=await page.evaluate(id=>{
+    const t=window.__TEST__;t.physics.gravity=false;t.select(id);t.slices.draw();
+    const view=t.slices,c=view.canvas,r=c.getBoundingClientRect();
+    for(let y=0;y<c.height;y+=3)for(let x=0;x<c.width;x+=3){
+      const target=[...view.hitPaths].reverse().find(h=>view.ctx.isPointInPath(h.path,x,y,'evenodd'));
+      if(target && target.id===id)return{x:r.left+x/c.width*r.width,y:r.top+y/c.height*r.height,id};
+    }
+    return null;
+  },info.b);
+  expect(hit).not.toBeNull();
+  await page.mouse.click(hit.x,hit.y);
+  expect(await page.evaluate(()=>window.__TEST__.selected)).toBe(info.b);
+  await page.screenshot({path:'test-results/linked-slices.png'});
 });

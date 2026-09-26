@@ -21,21 +21,11 @@ export class Puzzle {
       this.neighbors.get(a).add(b);
       this.neighbors.get(b).add(a);
     }
-    const random = seededRandom(seed),
-      anchors = new Set(
-        data.components.map((c) =>
-          c.reduce((a, b) =>
-            data.pieces.find((p) => p.id === a).voxels >=
-            data.pieces.find((p) => p.id === b).voxels
-              ? a
-              : b,
-          ),
-        ),
-      );
+    const random = seededRandom(seed);
     const spread = 12 + Math.cbrt(data.pieces.length) * 1.4;
     for (const p of data.pieces) {
       let offset = [0, 0, 0];
-      if (!anchors.has(p.id)) {
+      {
         const theta = random() * Math.PI * 2,
           z = random() * 2 - 1,
           r = spread * (0.65 + random() * 0.5),
@@ -46,7 +36,7 @@ export class Puzzle {
         id: p.id,
         members: new Set([p.id]),
         offset,
-        anchored: anchors.has(p.id),
+        anchored: false,
       });
       this.membership.set(p.id, p.id);
     }
@@ -56,7 +46,7 @@ export class Puzzle {
   }
   move(id, offset) {
     const g = this.group(id);
-    if (!g.anchored) g.offset = [...offset];
+    g.offset = [...offset];
   }
   adjacent(a, b) {
     if (a.members.size > b.members.size) [a, b] = [b, a];
@@ -69,7 +59,6 @@ export class Puzzle {
     let group = this.group(id),
       joined = 0;
     this.moves++;
-    if (group.anchored) return 0;
     let found = true;
     while (found) {
       found = false;
@@ -82,13 +71,11 @@ export class Puzzle {
         )
         .sort(
           (a, b) =>
-            Number(b.anchored) - Number(a.anchored) ||
             distance(group.offset, a.offset) - distance(group.offset, b.offset),
         );
       const other = candidates[0];
       if (!other) break;
-      group.offset = [...(group.anchored ? group.offset : other.offset)];
-      group.anchored = group.anchored || other.anchored;
+      group.offset = [...other.offset];
       for (const member of other.members) {
         group.members.add(member);
         this.membership.set(member, group.id);
@@ -101,10 +88,11 @@ export class Puzzle {
   }
   get placed() {
     return [...this.groups.values()]
-      .filter((g) => g.anchored)
+      .filter((g) => g.members.size > 1)
       .reduce((n, g) => n + g.members.size, 0);
   }
   get complete() {
-    return this.placed === this.data.pieces.length;
+    return this.groups.size === this.data.components.length;
   }
 }
+
