@@ -311,7 +311,10 @@ test('minimal home, animated previews, theme persistence, menu resume and diffic
  await page.reload();await page.locator('[data-mode=medium]').hover();
  await expect(page.locator('#difficulty-preview')).toHaveAttribute('src',/sand-medium.gif$/);
  await page.locator('[data-mode=medium]').click();
- page.on('dialog',dialog=>dialog.accept());await page.locator('#start-game').click();
+ await page.locator('#start-game').click();
+ await expect(page.locator('#restart-dialog')).toBeVisible();
+ await page.locator('#restart-cancel').click();await expect(page.locator('#continue-game')).toBeVisible();
+ await page.locator('#start-game').click();await page.locator('#restart-confirm').click();
  await expect(page.locator('#loading')).toBeHidden({timeout:60000});await page.locator('#skip-intro').click();
  await expect(page.locator('#docked-count')).toContainText('/ 324');
  await page.locator('#menu').click();await page.locator('#continue-game').click();

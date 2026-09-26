@@ -844,13 +844,14 @@ $("continue-game").onclick = () => {
 };
 $("start-game").onclick = () => {
   if (busy) return;
-  if (
-    ((hasGame && !completed) || savedSession) &&
-    !confirm("Start a new puzzle? Your saved assembly will be replaced.")
-  )
+  if ((hasGame && !completed) || savedSession) {
+    $("restart-dialog").showModal();
     return;
+  }
   newGame(chosenMode);
 };
+$("restart-confirm").onclick=()=>{$("restart-dialog").close();newGame(chosenMode);};
+$("restart-cancel").onclick=()=>$("restart-dialog").close();
 for (const i of document.querySelectorAll("[data-mode]"))
   i.onclick = () => {
     chosenMode = i.dataset.mode;
