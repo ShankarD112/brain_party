@@ -1,13 +1,15 @@
 # Validation
 
-Validation on 2026-09-25:
+Validated on 2026-09-26 at application commit `b7046d9673ccdd5b475af30e5656f9f5edef7293`.
 
-- `npm test`: **15 passed** locally and in GitHub Actions. Covers seeded scatter, non-neighbor rejection, tolerance, floating-cluster movement, anchor invariance, all real atlas meshes and complete graphs, save/restore, corrupt saves, storage denial, gravity/height assistance, shuffle preservation, and compressed/already-decoded geometry delivery.
-- `npm run build`: **passed**. Produces a static Vite website with relative asset URLs.
-- Browser checks: **6 passed** locally in Chromium and in [GitHub Actions run 36158053844](https://github.com/ShankarD112/brain_party/actions/runs/36158053844), testing commit `bf6e525325c8f72647b27d646d1f69afd5f18c6d`.
+- `npm test`: **20 passed**, locally and in GitHub Actions. Covers atlas delivery, seeded scatter, neighbor and tolerance rules, all three real atlas graphs, free cluster movement, save migration, bounded movement, size-dependent drift, mesh cross-sections, and celebration transforms.
+- `npm run build`: **passed**, locally and in GitHub Actions.
+- Chromium browser checks: **7 passed** in [GitHub Actions run 36261556681](https://github.com/ShankarD112/brain_party/actions/runs/36261556681), and in the independent push-triggered run 36261555543.
 
-The original migration failed all browser checks at atlas loading. Vite serves `.gz` with HTTP content encoding, so Fetch decodes the geometry before the application receives it. The loader now checks the received bytes and only decompresses when still needed.
+Browser scenarios cover menu lazy loading, tutorial, keyboard and actual pointer dragging, save/resume, pause/shuffle, completion of all 15/324/671-region levels, continued movement after the celebration, failed-download retry, mobile controls, arbitrary cluster joining, board bounds, linked 2D selection, plane changes, and selection transparency. Desktop, linked-slice, completion, and mobile screenshots from the passing run were inspected.
 
-The GitHub Actions workflow runs Playwright on Ubuntu and saves screenshots under the `browser-checks` artifact. Browser scenarios cover menu lazy loading, tutorial, keyboard and actual pointer dragging, refresh/resume, pause/shuffle, completion of each real atlas graph, failed-download retry, and touch-sized controls. Desktop and narrow-screen screenshots were inspected locally. These checks use software-rendered Chromium; physical touch-device and real-device GPU performance remain unverified.
+Initial browser runs exposed slow software rendering and animation timing. The celebration now advances by wall-clock time, and sustained slow frames lower drawing resolution without changing anatomical geometry or picking coordinates. The drag test settles the selected piece after checking upward drift, so it does not chase a moving target. No browser assertions were removed.
 
-The build artifact is retained before browser tests, including on failing runs. Its existence alone is not evidence that browser validation passed. Hosting uses the private Site identified by `.openai/hosting.json`; publication status must be checked separately from CI.
+The 2D reference intersects simplified puzzle meshes at canonical atlas coordinates. It is not raw 25 µm imaging or a measurement tool. Physical touch-device and real-device GPU performance remain unverified. Local Chromium could not launch in the current workspace, so the final browser verification used GitHub Actions.
+
+The workflow stores production output and browser screenshots as private artifacts. Hosting uses the separately managed private Site identified by `.openai/hosting.json`; publication status is checked separately from CI.
