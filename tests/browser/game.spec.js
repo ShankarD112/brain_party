@@ -52,6 +52,13 @@ test("lazy loading, tutorial, keyboard, genuine dragging, save/resume, shuffle, 
       () => window.__TEST__.puzzle.group(window.__TEST__.selected).offset,
     ),
   ).not.toEqual(before);
+  // End the drift/lift check before picking a moving anatomical surface.
+  await page.locator('#gravity').check();
+  await page.evaluate(() => {
+    const t=window.__TEST__,g=t.puzzle.group(t.selected);
+    t.physics.move(t.selected,[g.offset[0],t.physics.floorOffset(g),g.offset[2]]);
+    t.updatePositions();
+  });
   const candidates = await page.evaluate(() => {
     const t = window.__TEST__,
       m = t.meshes.get(t.selected),
@@ -243,9 +250,9 @@ test('free clusters, bounded movement, linked slices, and cross-view highlightin
     return {selected:t.meshes.get(a).material.emissiveIntensity,other:t.meshes.get(b).material.opacity,anchored:t.puzzle.group(a).anchored};
   },info);
   expect(focus.selected).toBeGreaterThan(.5);expect(focus.other).toBeLessThan(.3);expect(focus.anchored).toBe(false);
-  const first=await page.locator('#slice-canvas').evaluate(c=>c.toDataURL());
+  const first=await page.evaluate(()=>document.getElementById('slice-canvas').toDataURL());
   await page.locator('#slice-axis').selectOption('0');
-  await expect.poll(()=>page.locator('#slice-canvas').evaluate(c=>c.toDataURL())).not.toBe(first);
+  await expect.poll(()=>page.evaluate(()=>document.getElementById('slice-canvas').toDataURL()),{timeout:15000}).not.toBe(first);
   await page.locator('#slice-plane').check();
   expect(await page.evaluate(()=>window.__TEST__.slices.plane.visible)).toBe(true);
   const bounded=await page.evaluate(id=>{

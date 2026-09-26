@@ -295,7 +295,7 @@ function stylePieces() {
   for(const [id,mesh] of meshes) {
     const g=puzzle.group(id), chosen=id===selected;
     mesh.visible=!$("spotlight").checked || g===group || neighbors.has(id);
-    const faded=$("xray").checked && group?.members.size>1 && g===group && !chosen && !party.active;
+    const faded=$("xray").checked && group?.members.size>1 && !chosen && !party.active;
     mesh.material.transparent=faded;mesh.material.opacity=faded?.14:1;mesh.material.depthWrite=!faded;
     mesh.renderOrder=chosen?2:faded?1:0;
     mesh.material.emissive.set(chosen?'#43bda3':g===snapCandidate?'#816520':id===hovered?'#274955':'#000000');
@@ -964,11 +964,20 @@ function resize() {
 window.addEventListener("resize", resize);
 resize();
 let lastFrame = performance.now();
+let slowFrames = 0;
 function animate(i) {
   requestAnimationFrame(animate);
   const t = (i - lastFrame) / 1e3,
     e = Math.min(t, 0.1);
   if (((lastFrame = i), busy)) return;
+  // Lower only the drawing resolution when sustained rendering is slow.
+  // CSS coordinates, picking, and anatomical mesh detail remain unchanged.
+  if (!paused && t > .08 && t < 5) slowFrames++;
+  else slowFrames = 0;
+  if (slowFrames >= 3 && renderer.getPixelRatio() > .5) {
+    renderer.setPixelRatio(Math.max(.5, renderer.getPixelRatio() * .7));
+    slowFrames = 0;
+  }
   if (screen === "home") {
     (!hasGame && !reducedMotion && (meshRoot.rotation.y += e * 0.035),
       renderer.render(scene, camera));
@@ -1120,4 +1129,3 @@ if (import.meta.env.DEV && new URLSearchParams(location.search).has("test")) {
     get party(){return party;},
   };
 }
-

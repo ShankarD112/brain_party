@@ -31,7 +31,7 @@ const state = {
   started: true,
   assisted: true,
 };
-test("save/restore preserves floating clusters, reference, moves, and elapsed state", () => {
+test("save/restore preserves floating clusters, moves, and elapsed state", () => {
   const p = new Puzzle(data, 42);
   p.move(3, [8, 4, 2]);
   p.move(4, [8, 4, 2]);
@@ -118,7 +118,7 @@ test("floor, optional gravity, and height-assisted snapping behave consistently"
   assert.equal(physics.snap(2, 0.2), 1);
   assert.deepEqual(p.group(2).offset, [0, 0, 0]);
 });
-test("shuffle preserves connected floating clusters and anchored assembly", () => {
+test("shuffle preserves connected clusters while moving every loose piece", () => {
   const p = new Puzzle(data),
     physics = new Physics(p, bounds, 1);
   physics.skipIntro();
