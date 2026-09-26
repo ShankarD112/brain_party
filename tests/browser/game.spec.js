@@ -171,6 +171,10 @@ for (const [mode, count] of [
       await page.evaluate(() => localStorage.getItem("brain-party-session-v1")),
     ).toBeNull();
     await page.locator("#inspect-complete").click();
+    expect(await page.evaluate(()=>!!window.__TEST__.party.props)).toBe(true);
+    const old=await page.evaluate(()=>[...window.__TEST__.puzzle.group(window.__TEST__.selected).offset]);
+    await page.keyboard.down('ArrowLeft');await page.waitForTimeout(250);await page.keyboard.up('ArrowLeft');
+    expect(await page.evaluate(()=>window.__TEST__.puzzle.group(window.__TEST__.selected).offset)).not.toEqual(old);
     await page.screenshot({ path: `test-results/${mode}-complete.png` });
     expect(errors).toEqual([]);
   });

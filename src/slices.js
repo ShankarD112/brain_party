@@ -20,7 +20,7 @@ export class SliceViewer {
     new ResizeObserver(()=>this.schedule()).observe(this.canvas);
   }
   setData(meshes,bounds,puzzle) {
-    this.meshes=meshes;this.bounds=bounds;this.puzzle=puzzle;this.cache.clear();
+    this.meshes=meshes;this.bounds=bounds;this.puzzle=puzzle;this.selected=null;this.cache.clear();
     this.min=[0,1,2].map(a=>Math.min(...[...bounds.values()].map(b=>b.min[a])));
     this.max=[0,1,2].map(a=>Math.max(...[...bounds.values()].map(b=>b.max[a])));
   }

@@ -140,6 +140,9 @@ function updateBoardBoundary() {
   boardBoundary = new LineSegments(new EdgesGeometry(new BoxGeometry(physics.arenaHalf*2,.06,physics.arenaHalf*2)),new LineBasicMaterial({color:'#62ad9f',transparent:true,opacity:.55}));
   boardBoundary.position.y=physics.floor+.05;scene.add(boardBoundary);
   controls.maxDistance=physics.arenaHalf*5;
+  floorMesh.geometry.dispose();floorMesh.geometry=new PlaneGeometry(physics.arenaHalf*2,physics.arenaHalf*2);
+  floorRoot.remove(grid);grid.geometry.dispose();grid.material.dispose();
+  grid=new GridHelper(physics.arenaHalf*2,Math.ceil(physics.arenaHalf),'#345956','#1b363d');grid.position.y=.045;floorRoot.add(grid);
 }
 let storage;
 try {
@@ -260,7 +263,10 @@ function updatePositions() {
   for (const [i, t] of meshes)
     (t.position.fromArray(t.userData.piece.center),
       hasGame && t.position.add(new Vector3(...puzzle.group(i).offset)));
-  if(hasGame && puzzle){slices.updatePlane();if(completed)party.follow(puzzle.group(data.pieces[0].id).offset);}
+  if(hasGame && puzzle){
+    slices.updatePlane();if(completed)party.follow(puzzle.group(data.pieces[0].id).offset);
+    for(const ghost of ghostRoot.children){const off=puzzle.group(ghost.userData.targetMember).offset;ghost.position.fromArray(meshes.get(ghost.userData.pieceId).userData.piece.center).add(new Vector3(...off));}
+  }
 }
 function refreshGhost() {
   if ((clearGhost(), !(!puzzle || selected === void 0 || !$("guide").checked)))
@@ -276,7 +282,10 @@ function refreshGhost() {
             depthWrite: false,
           }),
         );
-      (e.position.fromArray(t.userData.piece.center), ghostRoot.add(e));
+      const group=puzzle.group(selected);
+      const target=[...puzzle.groups.values()].filter(g=>g!==group && puzzle.adjacent(group,g)).sort((a,b)=>b.members.size-a.members.size)[0]||group;
+      e.userData.targetMember=[...target.members][0];e.userData.pieceId=i;
+      (e.position.fromArray(t.userData.piece.center).add(new Vector3(...target.offset)), ghostRoot.add(e));
     }
 }
 function stylePieces() {
@@ -874,7 +883,7 @@ $("hint").onclick = () => {
     ((assisted = true),
     ($("guide").checked = true),
     refreshGhost(),
-    toast("Wireframe shows the selected cluster\u2019s place in the brain."));
+    toast("Wireframe aligns your cluster with a connected anatomical neighbor."));
 };
 $("help").onclick = () => {
   ($("help-dialog").showModal(),
@@ -1023,7 +1032,7 @@ function animate(i) {
         "Drag across the ground. E lifts, Q lowers. Nearby correct neighbors glow.",
       ));
   }
-  party.tick(e);
+  party.tick(t);
   if(party.active)slices.plane.visible=false;
   (updateEffects(e), controls.update(), renderer.render(scene, camera));
 }
