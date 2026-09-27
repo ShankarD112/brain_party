@@ -1,4 +1,4 @@
-import {WebGLRenderer,Scene,PerspectiveCamera,HemisphereLight,DirectionalLight,BufferGeometry,BufferAttribute,Mesh,MeshStandardMaterial,Color,Box3,Vector3} from 'three';
+import {WebGLRenderer,Scene,PerspectiveCamera,HemisphereLight,DirectionalLight,BufferGeometry,BufferAttribute,Mesh,MeshStandardMaterial,Color,Box3,Vector3,DoubleSide} from 'three';
 import {decodeGeometry} from './atlas.js';
 import {themes} from './themes.js';
 export class BrainPreview {
@@ -32,9 +32,9 @@ export class BrainPreview {
    const colors=new Float32Array(meta.vertices*3),palette=themes[theme].palette;
    for(const r of meta.regions){const c=new Color(mode?palette[r.slot]:(theme==='sand'?'#b58f74':'#91c9c4'));for(let v=r.start;v<r.start+r.count;v++)c.toArray(colors,v*3);}
    geometry.setAttribute('color',new BufferAttribute(colors,3));
-   this.mesh=new Mesh(geometry,new MeshStandardMaterial({vertexColors:true,roughness:.8}));this.mesh.rotation.y=rotation;this.scene.add(this.mesh);
+   this.mesh=new Mesh(geometry,new MeshStandardMaterial({vertexColors:true,roughness:.8,side:DoubleSide}));this.mesh.rotation.y=rotation;this.scene.add(this.mesh);
    const radius=new Box3().setFromObject(this.mesh).getSize(new Vector3()).length()/2;
-   this.camera.position.set(1,.65,1.4).normalize().multiplyScalar(radius*3.6);this.camera.lookAt(0,0,0);
+   this.camera.position.set(1,.65,1.4).normalize().multiplyScalar(radius*2.85);this.camera.lookAt(0,0,0);
    this.canvas.hidden=false;this.fallback.hidden=true;
   }catch{if(token===this.token){this.canvas.hidden=true;this.fallback.hidden=false;}this.cache.delete(key);}
  }

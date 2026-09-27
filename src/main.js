@@ -414,7 +414,7 @@ function finish() {
   if (!puzzle.complete || completed) return;
   ((completed = true), (started = false));
   if(autoUsed){
-    clearSession();progress();slices.schedule();party.reset();$("auto-complete").disabled=true;
+    clearSession();progress();slices.schedule();party.reset();$("auto-complete").disabled=true;$("auto-complete").textContent="Auto-completed";
     $("auto-status").textContent='Auto-complete finished · explore freely';
     $("completion-text").textContent='Auto-completed for exploration. This run is not timed or counted as a personal best.';
     $("replay-party").hidden=true;$("complete-dialog").showModal();fitAll();return;
@@ -1039,11 +1039,9 @@ function animate(i) {
     renderer.setPixelRatio(Math.max(.5, renderer.getPixelRatio() * .7));
     slowFrames = 0;
   }
-  if (screen === "home") {
-    (!hasGame && !reducedMotion && (meshRoot.rotation.y += e * 0.035),
-      renderer.render(scene, camera));
-    return;
-  }
+  // The opaque menu owns its lightweight renderer. Avoid drawing the hidden
+  // full atlas as well, especially after returning from Medium or Hard.
+  if (screen === "home") return;
   if (paused) return;
   started &&
     !completed &&
