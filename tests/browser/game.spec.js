@@ -181,6 +181,7 @@ for (const [mode, count] of [
     expect(
       await page.evaluate(() => localStorage.getItem("brain-party-session-v1")),
     ).toBeNull();
+    if(mode==='easy')await page.screenshot({path:"test-results/party-props.png"});
     await page.locator("#inspect-complete").click();
     expect(await page.evaluate(()=>!!window.__TEST__.party.props)).toBe(false);
     const old=await page.evaluate(()=>[...window.__TEST__.puzzle.group(window.__TEST__.selected).offset]);
