@@ -24,7 +24,7 @@ export class BrainParty {
       const phase=(this.age-5.8)/1.2;
       const jump=Math.sin(Math.PI*(phase%1));
       this.root.position.y=1.8*jump;
-      this.root.rotation.z=Math.sin(phase*Math.PI*2)*.06;
+      // Jump vertically, independent of where the completed cluster sits.
       this.blower.scale.z=.5+1.2*jump;
       return;
     }

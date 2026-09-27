@@ -58,7 +58,7 @@ export class SliceViewer {
     const scale=Math.min((width-32)/(this.max[h]-this.min[h]),(height-32)/(this.max[v]-this.min[v]));
     const mx=(this.min[h]+this.max[h])/2,my=(this.min[v]+this.max[v])/2;
     const project=p=>[width/2+(p[axes.indexOf(h)]-mx)*scale,height/2-(p[axes.indexOf(v)]-my)*scale];
-    this.hitPaths=[];let joined=0,visibleSelected=false;
+    this.hitPaths=[];let joined=0,visibleSelected=false,highlightedInSlice=0;
     const ids=[...this.meshes.keys()].sort((a,b)=>Number(a===this.selected||this.highlights?.has(a))-Number(b===this.selected||this.highlights?.has(b)));
     for(const id of ids) {
       const group=this.puzzle.group(id), connected=group.members.size>1 || this.puzzle.complete;
@@ -74,12 +74,12 @@ export class SliceViewer {
       ctx.fillStyle=this.meshes.get(id).userData.displayColor||this.meshes.get(id).userData.piece.color;ctx.fill(path,'evenodd');
       ctx.strokeStyle=selected?(this.theme?.ink||'#fff5cc'):(this.theme?.muted||'#6a8497');ctx.lineWidth=(selected?1.7:.6)*devicePixelRatio;ctx.stroke(outline);
       if(connected || selected)this.hitPaths.push({id,path});
-      if(selected && contours.length)visibleSelected=true;
+      if(selected && contours.length){visibleSelected=true;if(this.highlights?.has(id))highlightedInSlice++;}
     }
     ctx.globalAlpha=1;
     document.getElementById('slice-location').textContent=`${this.level.toFixed(2)} mm · ${['LR','DV (inverted)','AP (inverted)'][this.axis]} from atlas centre`;
     document.getElementById('slice-orientation').textContent=this.axis===1?'Anterior ↑ · Left–right ↔':'Dorsal ↑ · '+(this.axis===2?'Left–right ↔':'Anterior–posterior ↔');
-    document.getElementById('slice-caption').textContent=`${joined} joined regions shown in colour + selected region. ${visibleSelected?'Click a coloured section to select it.':'Selected region is outside this slice; use Find selected.'}`;
+    document.getElementById('slice-caption').textContent=`${joined} joined regions shown in colour. ${this.highlights?.size?`${highlightedInSlice} of ${this.highlights.size} search highlights intersect this slice. `:""}${visibleSelected?'Click a coloured section to select it.':'Selected region is outside this slice; use Find selected.'}`;
     this.updatePlane();
   }
 }

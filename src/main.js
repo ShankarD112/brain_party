@@ -319,6 +319,14 @@ function renderHighlights() {
   }
   $("clear-highlights").hidden=highlights.size===0;
 }
+function focusHighlights() {
+  if(highlights.size<2){focusSelected();return;}
+  const box=new Box3();for(const id of highlights)box.expandByObject(meshes.get(id));
+  const center=box.getCenter(new Vector3()),size=box.getSize(new Vector3());
+  controls.target.copy(center);
+  camera.position.copy(center).add(new Vector3(.7,1.1,1).normalize().multiplyScalar(Math.max(size.x,size.y,size.z,3)*2.5));
+  controls.update();
+}
 function applyTheme(name) {
   themeName=themes[name]?name:'sand';const theme=themes[themeName];
   document.body.dataset.theme=themeName;
@@ -904,7 +912,7 @@ $("region-search").oninput = (i) => {
   const matches=data.pieces.filter(p=>(p.name+' '+p.acronym+' '+p.id).toLowerCase().includes(query)).slice(0,35);
   for(const p of matches){
     const b=document.createElement('button');b.textContent=p.name;b.setAttribute('aria-pressed',String(highlights.has(p.id)));
-    b.onclick=()=>{if(physics.intro)return;highlights.add(p.id);$("xray").checked=true;select(p.id);renderHighlights();b.setAttribute('aria-pressed','true');focusSelected();};
+    b.onclick=()=>{if(physics.intro)return;highlights.add(p.id);$("xray").checked=true;select(p.id);renderHighlights();b.setAttribute('aria-pressed','true');focusHighlights();};
     $("search-results").append(b);
   }
   if(!matches.length)$("search-results").textContent='No matching region.';
