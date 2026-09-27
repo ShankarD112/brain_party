@@ -27,6 +27,9 @@ def main():
   nodes[n['id']]=n; paths[n['id']]=path+[n['id']]
   for c in n['children']: walk(c,paths[n['id']])
  walk(tree,[])
+ (out/'hierarchy.json').write_text(json.dumps({'source':SOURCES['structure_graph.json'],'nodes':[
+  {'id':n['id'],'name':n['name'],'acronym':n['acronym'],'parent':n.get('parent_structure_id')} for n in nodes.values()
+ ]},separators=(',',':')))
  vol,header=nrrd.read(str(cache/'annotation_25.nrrd'))
  assert vol.shape==(528,320,456), vol.shape
  assert np.allclose(np.linalg.norm(header['space directions'],axis=1),25)
@@ -92,3 +95,4 @@ def main():
   print(mode,manifest['levels'][mode],flush=True)
  (out/'manifest.json').write_text(json.dumps(manifest,indent=2))
 if __name__=='__main__': main()
+

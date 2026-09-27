@@ -8,7 +8,7 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -23,7 +23,13 @@ jobs:
           name: brain-party-website
           path: dist/
       - run: npx playwright install --with-deps chromium
-      - run: npm run test:browser
+      - run: npm run test:browser -- tests/browser/explore.spec.js
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: exploration-checks
+          path: test-results/
+      - run: npm run test:browser -- tests/browser/game.spec.js
       - uses: actions/upload-artifact@v4
         if: always()
         with:

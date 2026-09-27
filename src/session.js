@@ -11,7 +11,7 @@ const vector = (value) =>
 export function snapshot(puzzle, state) {
   return {
     ...state,
-    version: 1,
+    version: 2,
     atlas: ATLAS_VERSION,
     savedAt: Date.now(),
     moves: puzzle.moves,
@@ -27,7 +27,7 @@ export function readSave(storage) {
     const save = JSON.parse(storage.getItem(SAVE_KEY));
     if (
       !save ||
-      save.version !== 1 ||
+      ![1, 2].includes(save.version) ||
       save.atlas !== ATLAS_VERSION ||
       !modes.has(save.mode)
     )
@@ -41,7 +41,7 @@ export function readSave(storage) {
 export function restore(data, save) {
   if (
     !save ||
-    save.version !== 1 ||
+    ![1, 2].includes(save.version) ||
     save.atlas !== ATLAS_VERSION ||
     !modes.has(save.mode) ||
     !Number.isInteger(save.seed) ||
@@ -57,9 +57,6 @@ export function restore(data, save) {
   )
     throw new Error("Invalid saved puzzle");
   const puzzle = new Puzzle(data, save.seed);
-  const anchors = new Set(
-    [...puzzle.groups.values()].filter((g) => g.anchored).map((g) => g.id),
-  );
   const seen = new Set(),
     groups = new Map(),
     membership = new Map();
@@ -90,9 +87,7 @@ export function restore(data, save) {
       }
     if (reached.size !== members.size)
       throw new Error("Disconnected saved cluster");
-    const anchored = entry.members.some((id) => anchors.has(id));
-    if (anchored && entry.offset.some((n) => n !== 0))
-      throw new Error("Displaced reference");
+    const anchored = false; // Version 1 reference clusters become freely movable.
     const id = entry.members[0];
     groups.set(id, { id, members, anchored, offset: [...entry.offset] });
     for (const member of members) membership.set(member, id);
@@ -113,3 +108,4 @@ export function writeSave(storage, value) {
     return false;
   }
 }
+

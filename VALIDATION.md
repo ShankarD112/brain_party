@@ -1,13 +1,17 @@
+# Current exploration update
+
+27 unit/data tests and the production build pass locally. New Chromium scenarios cover saved-puzzle preservation, parent acronym search, isolation, hierarchy navigation, crosshair coordinates, pinning and plane changes. Browser CI is pending for this update.
+
 # Validation
 
-Validation on 2026-09-25:
+Validated on 2026-09-27: **23 unit/data checks**, the production build, and **11 Chromium browser scenarios** pass at `227038830c64401709371d561a56bcbf41c62273` in [GitHub Actions run 36297429518](https://github.com/ShankarD112/brain_party/actions/runs/36297429518). The final follow-up separates the auto-complete control from the slice panel, adds a party-prop screenshot, stops rendering the hidden game behind the opaque homepage, matches preview surface rendering to the game, and enlarges the turntable framing. These small follow-ups were code-reviewed and rebuilt.
 
-- `npm test`: **15 passed** locally and in GitHub Actions. Covers seeded scatter, non-neighbor rejection, tolerance, floating-cluster movement, anchor invariance, all real atlas meshes and complete graphs, save/restore, corrupt saves, storage denial, gravity/height assistance, shuffle preservation, and compressed/already-decoded geometry delivery.
-- `npm run build`: **passed**. Produces a static Vite website with relative asset URLs.
-- Browser checks: **6 passed** locally in Chromium and in [GitHub Actions run 36158053844](https://github.com/ShankarD112/brain_party/actions/runs/36158053844), testing commit `bf6e525325c8f72647b27d646d1f69afd5f18c6d`.
+Browser scenarios cover lazy loading, tutorial, keyboard and real pointer dragging, save/resume, pause/shuffle, completion of all 15/324/671-region levels, movement after celebration, failed-download retry, mobile controls, linked slices, multi-region X-ray highlighting, theme persistence, animated difficulty previews, repeated menu/resume transitions, cancelling/confirming difficulty changes through the in-page restart dialog, auto-completion without celebration, camera presets and unrestricted polar orbit, Beige opacity/depth settings, and connected/unknown slice hover labels.
 
-The original migration failed all browser checks at atlas loading. Vite serves `.gz` with HTTP content encoding, so Fetch decodes the geometry before the application receives it. The loader now checks the received bytes and only decompresses when still needed.
+Unit/data checks cover atlas delivery, contact graphs, joining and moving arbitrary clusters, save migration, bounded movement and drift, mesh cross-sections, dorsal-side spin transforms, the delayed hat/blower and two jumps, and a ceiling that preserves reachability of anatomical assembly.
 
-The GitHub Actions workflow runs Playwright on Ubuntu and saves screenshots under the `browser-checks` artifact. Browser scenarios cover menu lazy loading, tutorial, keyboard and actual pointer dragging, refresh/resume, pause/shuffle, completion of each real atlas graph, failed-download retry, and touch-sized controls. Desktop and narrow-screen screenshots were inspected locally. These checks use software-rendered Chromium; physical touch-device and real-device GPU performance remain unverified.
+Earlier large-atlas browser runs completed their interaction assertions but exceeded the 90-second test budget during screenshot capture on the software GPU. Those two tests now allow 180 seconds; all assertions remain. Physical-device GPU performance remains unverified. Local Chromium could not launch in the current workspace, so final browser verification used GitHub Actions.
 
-The build artifact is retained before browser tests, including on failing runs. Its existence alone is not evidence that browser validation passed. Hosting uses the private Site identified by `.openai/hosting.json`; publication status must be checked separately from CI.
+The 2D reference intersects simplified puzzle meshes at canonical atlas coordinates. It is not raw 25 µm imaging or a measurement tool. The homepage renders reduced atlas geometry in a live turntable for three difficulties, with Ocean and Beige palettes. Reduced-motion preferences stop rotation; a PNG poster is the graphics fallback.
+
+The workflow stores production output and browser screenshots as private artifacts. Hosting uses the separately managed private Site identified by `.openai/hosting.json`; publication status is checked separately from CI.
