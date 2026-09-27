@@ -1,4 +1,4 @@
-# Brain Part(s)y
+# Brain Party
 
 A browser-first 3D anatomical jigsaw puzzle. Open the website, choose a difficulty, and put a real mouse brain back together. No desktop installation or account is needed.
 

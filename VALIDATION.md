@@ -1,15 +1,17 @@
 # Validation
 
-Validated on 2026-09-26 at application commit `b7046d9673ccdd5b475af30e5656f9f5edef7293`.
+Validated on 2026-09-27 at application commit `bfd6e3528d388e99c7e4ac76b9ab2e805ef755da`. The final follow-up changes the display name to Brain Party and updates documentation and the matching title assertion.
 
-- `npm test`: **20 passed**, locally and in GitHub Actions. Covers atlas delivery, seeded scatter, neighbor and tolerance rules, all three real atlas graphs, free cluster movement, save migration, bounded movement, size-dependent drift, mesh cross-sections, and celebration transforms.
-- `npm run build`: **passed**, locally and in GitHub Actions.
-- Chromium browser checks: **7 passed** in [GitHub Actions run 36261556681](https://github.com/ShankarD112/brain_party/actions/runs/36261556681), and in the independent push-triggered run 36261555543.
+- `npm test`: **22 passed**, locally and in GitHub Actions.
+- `npm run build`: **passed**.
+- Chromium browser checks: **9 passed** in [GitHub Actions run 36281587241](https://github.com/ShankarD112/brain_party/actions/runs/36281587241), also passing in the independent push-triggered run 36281584820.
 
-Browser scenarios cover menu lazy loading, tutorial, keyboard and actual pointer dragging, save/resume, pause/shuffle, completion of all 15/324/671-region levels, continued movement after the celebration, failed-download retry, mobile controls, arbitrary cluster joining, board bounds, linked 2D selection, plane changes, and selection transparency. Desktop, linked-slice, completion, and mobile screenshots from the passing run were inspected.
+Browser scenarios cover lazy loading, tutorial, keyboard and real pointer dragging, save/resume, pause/shuffle, completion of all 15/324/671-region levels, movement after celebration, failed-download retry, mobile controls, linked slices, multi-region X-ray highlighting, theme persistence, animated difficulty previews, repeated menu/resume transitions, and cancelling/confirming difficulty changes through the in-page restart dialog.
 
-Initial browser runs exposed slow software rendering and animation timing. The celebration now advances by wall-clock time, and sustained slow frames lower drawing resolution without changing anatomical geometry or picking coordinates. The drag test settles the selected piece after checking upward drift, so it does not chase a moving target. No browser assertions were removed.
+Unit/data checks cover atlas delivery, contact graphs, joining and moving arbitrary clusters, save migration, bounded movement and drift, mesh cross-sections, dorsal-side spin transforms, the delayed hat/blower and two jumps, and a ceiling that preserves reachability of anatomical assembly.
 
-The 2D reference intersects simplified puzzle meshes at canonical atlas coordinates. It is not raw 25 µm imaging or a measurement tool. Physical touch-device and real-device GPU performance remain unverified. Local Chromium could not launch in the current workspace, so the final browser verification used GitHub Actions.
+Earlier large-atlas browser runs completed their interaction assertions but exceeded the 90-second test budget during screenshot capture on the software GPU. Those two tests now allow 180 seconds; all assertions remain. Physical-device GPU performance remains unverified. Local Chromium could not launch in the current workspace, so final browser verification used GitHub Actions.
+
+The 2D reference intersects simplified puzzle meshes at canonical atlas coordinates. It is not raw 25 µm imaging or a measurement tool. The nine animated previews are rendered from the shipped atlas for three difficulties and three themes; each has a static reduced-motion poster.
 
 The workflow stores production output and browser screenshots as private artifacts. Hosting uses the separately managed private Site identified by `.openai/hosting.json`; publication status is checked separately from CI.

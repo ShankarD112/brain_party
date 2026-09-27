@@ -287,7 +287,7 @@ test('minimal home, animated previews, theme persistence, menu resume and diffic
  const errors=[];page.on('pageerror',e=>errors.push(e.message));
  await page.emulateMedia({reducedMotion:'reduce'});
  await page.goto('/?test');
- await expect(page.locator('#home-screen h1')).toHaveText('BRAIN PART(S)Y');
+ await expect(page.locator('#home-screen h1')).toHaveText('BRAIN PARTY');
  await expect(page.locator('#start-game')).toHaveText('Start');
  await expect(page.locator('#continue-game')).toBeHidden();
  await page.locator('#theme').selectOption('midnight');
