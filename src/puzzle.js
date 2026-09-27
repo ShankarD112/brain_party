@@ -41,6 +41,13 @@ export class Puzzle {
       this.membership.set(p.id, p.id);
     }
   }
+  assemble() {
+    this.groups.clear();this.membership.clear();
+    for(const component of this.data.components){
+      const id=component[0];this.groups.set(id,{id,members:new Set(component),offset:[0,0,0],anchored:false});
+      for(const member of component)this.membership.set(member,id);
+    }
+  }
   group(id) {
     return this.groups.get(this.membership.get(id));
   }

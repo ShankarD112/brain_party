@@ -98,3 +98,11 @@ The script emits the compressed binary files consumed by the web app. The option
 No public distribution license is assigned to the application code. Third-party dependency and atlas terms remain applicable.
 
 The lightweight real-time homepage meshes are regenerated with `python scripts/build_preview_meshes.py` (NumPy required). Static PNG posters remain available as a graphics fallback.
+
+## Just explore and atlas markers
+
+Choose **Just explore** above Difficulty, then Start, to open the assembled 671-region brain without a timer, shuffle, intro or celebration. Existing puzzle saves are preserved. Search the Allen hierarchy by acronym, full name or ID, expand parent branches, and select a parent to highlight all represented descendant labels (including residual parent voxels). Show selected region only isolates that selection in 3D. Hierarchy navigation also updates the 2D reference.
+
+Move over a slice to position its crosshair; click to pin it and use Unpin marker to resume tracking. The marker readout shows **ML, DV, AP in millimetres from the CCF volume origin**, not bregma or stereotaxic coordinates. The transformation is the inverse of the atlas builder: ML = game X + 5.7, DV = 4 − game Y, AP = 6.6 − game Z. The 3D marker follows the selected cluster when the slice plane is enabled. Rendering meshes remain simplified.
+
+Auto-complete now budgets roughly four seconds for all remaining clusters, processes multiple small joins per frame when needed, and updates slices/storage once per frame. Actual wall time depends on rendering performance. Camera presets are grouped at the bottom right.

@@ -1,3 +1,4 @@
+import {RegionHierarchy} from "./hierarchy.js";
 import { BrainPreview } from "./preview.js";
 import { AutoComplete } from "./autocomplete.js";
 import { themes, regionColors } from "./themes.js";
@@ -142,6 +143,7 @@ const highlights = new Set();
 let themeName = "ocean", regionPalette = new Map();
 slices.highlights = highlights;
 let autoComplete, autoUsed=false;
+let exploring=false, exploreChoice=false, hierarchy=null, exploreNode=null, selectingHierarchy=false;
 let boardBoundary;
 function updateBoardBoundary() {
   if(boardBoundary){scene.remove(boardBoundary);boardBoundary.geometry.dispose();boardBoundary.material.dispose();}
@@ -183,7 +185,7 @@ const tutorialSteps = [
   ],
 ];
 function saveSession() {
-  if (!hasGame || busy || completed || !puzzle || physics.intro) return;
+  if (exploring || !hasGame || busy || completed || !puzzle || physics.intro) return;
   const value = snapshot(puzzle, {
     mode,
     seed,
@@ -226,7 +228,7 @@ function renderTutorial() {
 }
 function showTutorial() {
   if (
-    tutorialSeen ||
+    exploring || tutorialSeen ||
     $("tutorial-dialog").open ||
     screen !== "play" ||
     busy ||
@@ -303,7 +305,7 @@ function stylePieces() {
   if(group)for(const id of group.members)for(const n of puzzle.neighbors.get(id))neighbors.add(n);
   for(const [id,mesh] of meshes) {
     const g=puzzle.group(id), chosen=id===selected || highlights.has(id);
-    mesh.visible=chosen || !$("spotlight").checked || g===group || neighbors.has(id);
+    mesh.visible=exploring&&$("isolate-region").checked ? chosen : chosen || !$("spotlight").checked || g===group || neighbors.has(id);
     const faded=$("xray").checked && (group?.members.size>1 || highlights.size>0) && !chosen && !party.active;
     const color=regionPalette.get(id)||mesh.userData.piece.color;
     mesh.userData.displayColor=color;mesh.material.color.set(color);
@@ -318,6 +320,7 @@ function stylePieces() {
 }
 function renderHighlights() {
   $("highlighted-regions").replaceChildren();
+  if(exploring){$("clear-highlights").hidden=true;return;}
   for(const id of highlights){
     const b=document.createElement('button');b.textContent=meshes.get(id).userData.piece.acronym+' ×';
     b.setAttribute('aria-label','Remove highlight: '+meshes.get(id).userData.piece.name);
@@ -353,6 +356,7 @@ function updatePreview(mode,animate=true){
   image.alt=mode?`${mode[0].toUpperCase()+mode.slice(1)}: ${{easy:15,medium:324,hard:671}[mode]} brain regions`:'Rotating whole brain';
 }
 function select(i, keepSlice = false) {
+  if(exploring&&!selectingHierarchy){exploreNode=hierarchy?.nodes.get(i);highlights.clear();highlights.add(i);renderHighlights();}
   ((selected = i), (snapCandidate = null));
   const t = meshes.get(i).userData.piece,
     e = puzzle.group(i);
@@ -372,6 +376,7 @@ function select(i, keepSlice = false) {
     stylePieces(),
     refreshGhost());
   slices.select(i, keepSlice);
+  if(exploring&&exploreNode){describeHierarchy(exploreNode);hierarchy.reveal(exploreNode.id);}
 }
 function progress() {
   const i = data.pieces.length,
@@ -408,7 +413,7 @@ function clock(i) {
   );
 }
 function startTimer() {
-  !physics.intro && !completed && (started = true);
+  !exploring && !physics.intro && !completed && (started = true);
 }
 function finish() {
   if (!puzzle.complete || completed) return;
@@ -555,7 +560,7 @@ function focusSelected() {
 }
 function setScreen(i) {
   if(party.active)party.stop();
-  if(boardBoundary)boardBoundary.visible=i === "play";
+  if(boardBoundary)boardBoundary.visible=i === "play"&&!exploring;
   if(i === "home"){autoComplete?.stop();$("auto-complete").textContent="Auto-complete";slices.plane.visible=false;$("complete-dialog").close();}
   if (i === "home") saveSession();
   for(const d of document.querySelectorAll("dialog[open]"))d.close();
@@ -584,7 +589,7 @@ function goHome() {
   busy || setScreen("home");
 }
 function updateIntro() {
-  if (!physics.intro && !tutorialSeen && screen === "play")
+  if (!exploring && !physics.intro && !tutorialSeen && screen === "play")
     queueMicrotask(showTutorial);
   const i = physics.intro;
   (($("intro-banner").hidden = !i || screen !== "play"),
@@ -611,7 +616,7 @@ function updateIntro() {
     ($("intro-detail").textContent = t[physics.phase][1])),
     (controls.enabled = !paused && screen === "play"));
 }
-async function newGame(i = mode, t = false, saved = null) {
+async function newGame(i = mode, t = false, saved = null, explore = false) {
   const e = ++loadToken;
   $("retry-load").hidden = true;
   $("cancel-load").hidden = true;
@@ -626,8 +631,11 @@ async function newGame(i = mode, t = false, saved = null) {
         $("loading-text").textContent =
           `Loading ${i} regions · ${(bytes / 1048576).toFixed(1)} MB received`;
     });
+    let graph;
+    if(explore){const response=await fetch("./data/hierarchy.json");if(!response.ok)throw Error("Region hierarchy unavailable");graph=await response.json();}
     const restoredPuzzle = saved ? restore(n, saved) : null;
     if (e !== loadToken) return;
+    exploring=explore;exploreNode=null;document.body.classList.toggle("is-exploring",exploring);$("explore-hierarchy").hidden=!exploring;$("isolate-region").checked=false;
     highlights.clear();renderHighlights();autoComplete?.stop();autoUsed=false;$("auto-complete").disabled=false;$("auto-complete").textContent="Auto-complete";$("auto-status").textContent="";$("replay-party").hidden=false;
     (disposeScene(),
       (data = n),
@@ -675,9 +683,12 @@ async function newGame(i = mode, t = false, saved = null) {
       );
       ((c.userData.piece = s), meshRoot.add(c), meshes.set(s.id, c));
     }
+    hierarchy=exploring?new RegionHierarchy(graph.nodes,data.pieces):null;
+    if(hierarchy)hierarchy.render($("hierarchy-tree"),selectHierarchy);
     regionPalette=regionColors(data,themes[themeName]);
     physics = new Physics(puzzle, bounds, seed);
     slices.setData(meshes,bounds,puzzle);updateBoardBoundary();makeAutoComplete();
+    if(exploring){physics.skipIntro();puzzle.assemble();physics.velocity.clear();completed=true;}
     ((physics.gravity = true),
       (floorRoot.position.y = physics.floor),
       (grid.position.y = 0.045),
@@ -690,7 +701,7 @@ async function newGame(i = mode, t = false, saved = null) {
       ($("region-search").value = ""),
       $("search-results").replaceChildren(),
       ($("fit-cue").hidden = true),
-      !t && reducedMotion && physics.skipIntro(),
+      !exploring && !t && reducedMotion && physics.skipIntro(),
       updatePositions(),
       select(
         data.pieces[0].id,
@@ -743,6 +754,12 @@ async function newGame(i = mode, t = false, saved = null) {
         "SESSION " + seed.toString(16).toUpperCase();
       toast("Your saved puzzle is ready. Welcome back.");
     }
+    if(exploring){
+      physics.gravity=false;$("gravity").checked=false;$("voyage-label").textContent="JUST EXPLORE";$("level-description").textContent="671 regions · assembled mouse brain";
+      $("status").textContent="Explore the region hierarchy or search by acronym";
+      $("save-status").textContent=savedSession?"Your saved puzzle is preserved":"Exploration does not overwrite puzzle saves";
+      selectHierarchy(hierarchy.roots[0].id,false);fitAll();
+    }else $("voyage-label").textContent="YOUR PUZZLE";
     if (!t) saveSession();
   } catch (n) {
     (($("loading-text").textContent =
@@ -751,7 +768,7 @@ async function newGame(i = mode, t = false, saved = null) {
     busy = false;
     $("retry-load").hidden = false;
     $("cancel-load").hidden = false;
-    pendingLoad = { mode: i, saved };
+    pendingLoad = { mode: i, saved, explore };
   }
 }
 function pointerRay(i) {
@@ -787,6 +804,7 @@ renderer.domElement.addEventListener(
     const t = pick(i);
     if (t) {
       select(t.object.userData.piece.id);
+      if(exploring)return;
       ((controls.enabled = false),
         i.stopImmediatePropagation(),
         renderer.domElement.setPointerCapture(i.pointerId),
@@ -867,7 +885,8 @@ $("continue-game").onclick = () => {
   else if (savedSession) newGame(savedSession.mode, false, savedSession);
 };
 $("start-game").onclick = () => {
-  if (busy || !chosenMode) return;
+  if (busy || (!chosenMode&&!exploreChoice)) return;
+  if(exploreChoice){newGame("hard",false,null,true);return;}
   if ((hasGame && !completed) || savedSession) {
     $("restart-dialog").showModal();
     return;
@@ -878,6 +897,7 @@ $("restart-confirm").onclick=()=>{$("restart-dialog").close();newGame(chosenMode
 $("restart-cancel").onclick=()=>$("restart-dialog").close();
 for (const i of document.querySelectorAll("[data-mode]"))
   i.onclick = () => {
+    exploreChoice=false;$("just-explore").setAttribute("aria-pressed","false");
     chosenMode = i.dataset.mode;$("start-game").disabled=false;
     updatePreview(chosenMode,true);
     for (const t of document.querySelectorAll("[data-mode]"))
@@ -912,7 +932,7 @@ $("shuffle").onclick = () => {
         : "No unconnected pieces remain.",
     ));
 };
-$("focus").onclick = focusSelected;
+$("focus").onclick = ()=>exploring?focusHighlights():focusSelected();
 $("overview").onclick = fitAll;
 $("brain-view").onclick = viewBrain;
 $("next").onclick = () => {
@@ -925,6 +945,10 @@ $("next").onclick = () => {
 $("region-search").oninput = (i) => {
   const query=i.target.value.trim().toLowerCase();$("search-results").replaceChildren();
   if(!query || busy || !data)return;
+  if(exploring){
+    for(const n of hierarchy.search(query)){const b=document.createElement("button");b.textContent=n.acronym+" · "+n.name;b.onclick=()=>selectHierarchy(n.id);$("search-results").append(b);}
+    if(!$("search-results").children.length)$("search-results").textContent="No represented region matches.";return;
+  }
   const matches=data.pieces.filter(p=>(p.name+' '+p.acronym+' '+p.id).toLowerCase().includes(query)).slice(0,35);
   for(const p of matches){
     const b=document.createElement('button');b.textContent=p.name;b.setAttribute('aria-pressed',String(highlights.has(p.id)));
@@ -983,6 +1007,7 @@ window.addEventListener("keydown", (i) => {
   )
     return;
   const t = i.key.toLowerCase();
+  if(exploring){if(t==="f")focusHighlights();return;}
   ([
     "q",
     "e",
@@ -1050,7 +1075,7 @@ function animate(i) {
   const n = physics.intro,
     r = keys.size || liftDirection;
   if (
-    !physics.intro &&
+    !exploring && !physics.intro &&
     r &&
     selected !== void 0 && !party.active && !autoComplete?.active
   ) {
@@ -1080,7 +1105,7 @@ function animate(i) {
   if (
     (drag && s.add(drag.id),
     r && s.add(selected),
-    !party.active && !autoComplete?.active && physics.tick(e, s),
+    !exploring && !party.active && !autoComplete?.active && physics.tick(e, s),
     autoComplete?.tick(t),
     updatePositions(),
     n)
@@ -1103,7 +1128,7 @@ function animate(i) {
   }
   party.tick(t);
   // Hide the floor from below so it never blocks ventral exploration.
-  floorRoot.visible=camera.position.y>=physics.floor;
+  floorRoot.visible=!exploring&&camera.position.y>=physics.floor;
   if(party.active)slices.plane.visible=false;
   (updateEffects(e), controls.update(), renderer.render(scene, camera));
 }
@@ -1142,7 +1167,7 @@ $("tutorial-dialog").addEventListener("cancel", (event) => {
   closeTutorial();
 });
 $("retry-load").onclick = () =>
-  newGame(pendingLoad.mode, false, pendingLoad.saved);
+  newGame(pendingLoad.mode, false, pendingLoad.saved, pendingLoad.explore);
 $("cancel-load").onclick = () => {
   $("loading").hidden = true;
   setScreen("home");
@@ -1193,6 +1218,8 @@ if (import.meta.env.DEV && new URLSearchParams(location.search).has("test")) {
     get theme(){return themeName;},
     get autoComplete(){return autoComplete;},
     get autoUsed(){return autoUsed;},
+    get exploring(){return exploring;},
+    get hierarchy(){return hierarchy;},
     get controls(){return controls;},
   };
 }
@@ -1228,3 +1255,24 @@ for(const b of document.querySelectorAll('[data-view]'))b.onclick=()=>{
   controls.target.copy(center);camera.up.set(0,1,0);
   camera.position.copy(center).add(new Vector3(...directions[b.dataset.view]).normalize().multiplyScalar(Math.max(size.x,size.y,size.z,10)*1.8));controls.update();
 };
+
+$("just-explore").onclick=()=>{
+ exploreChoice=true;chosenMode=null;$("start-game").disabled=false;$("just-explore").setAttribute("aria-pressed","true");
+ for(const b of document.querySelectorAll('[data-mode]')){b.classList.remove('active');b.setAttribute('aria-pressed','false');}
+ updatePreview(null);
+};
+$("isolate-region").onchange=()=>{stylePieces();slices.schedule();};
+function describeHierarchy(node){
+ $("selection-tag").textContent="SELECTED REGION";$("region-name").textContent=node.acronym+" · "+node.name;
+ $("region-path").textContent=hierarchy.path(node.id).slice(1).map(n=>n.acronym).join(" › ");
+ $("region-detail").textContent=`Allen ID ${node.id} · ${node.members.length} represented region${node.members.length===1?'':'s'}`;
+}
+function selectHierarchy(id,focus=true){
+ const node=hierarchy?.nodes.get(id);if(!node?.members.length)return;
+ exploreNode=node;highlights.clear();for(const member of node.members)highlights.add(member);
+ selectingHierarchy=true;select(meshes.has(id)?id:node.members[0]);selectingHierarchy=false;
+ describeHierarchy(node);renderHighlights();hierarchy.reveal(id);
+ const box=new Box3();for(const member of node.members){const b=bounds.get(member);box.expandByPoint(new Vector3(...b.min));box.expandByPoint(new Vector3(...b.max));}
+ slices.setMarker(box.getCenter(new Vector3()).toArray(),true);
+ if(focus)focusHighlights();
+}

@@ -1,3 +1,7 @@
+# Current exploration update
+
+27 unit/data tests and the production build pass locally. New Chromium scenarios cover saved-puzzle preservation, parent acronym search, isolation, hierarchy navigation, crosshair coordinates, pinning and plane changes. Browser CI is pending for this update.
+
 # Validation
 
 Validated on 2026-09-27: **23 unit/data checks**, the production build, and **11 Chromium browser scenarios** pass at `227038830c64401709371d561a56bcbf41c62273` in [GitHub Actions run 36297429518](https://github.com/ShankarD112/brain_party/actions/runs/36297429518). The final follow-up separates the auto-complete control from the slice panel, adds a party-prop screenshot, stops rendering the hidden game behind the opaque homepage, matches preview surface rendering to the game, and enlarges the turntable framing. These small follow-ups were code-reviewed and rebuilt.

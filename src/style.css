@@ -1242,3 +1242,22 @@ label,input[type=checkbox],input[type=range]{accent-color:var(--accent)}
 @media(max-width:760px){.preview-frame{width:280px;height:234px}}
 
 @media(min-width:1101px){.slice-panel{bottom:148px}}
+/* Keep camera presets and assembly controls together, clear of the centre. */
+.camera-views{left:auto;right:28px;bottom:112px;transform:none;width:auto}
+@media(min-width:1101px){.slice-panel{bottom:164px}}
+#just-explore{display:block;margin:0 auto 18px;min-width:240px;background:var(--surface);border-color:var(--line);color:var(--ink)}
+#just-explore small{display:block;margin-top:4px;font-size:11px;color:var(--muted)}
+#just-explore[aria-pressed=true]{border:2px solid var(--accent)}
+.marker-readout{margin:10px 0;padding:9px;border:1px solid var(--line);border-radius:8px;font-size:12px}
+.marker-readout output{font-variant-numeric:tabular-nums;color:var(--ink);margin:7px 0}.marker-readout small{font-size:10px}.marker-readout button{margin-top:6px;padding:5px}
+.is-exploring .stats,.is-exploring .physics-controls,.is-exploring #region-panel .switch-row,.is-exploring #shuffle,.is-exploring .shuffle-note,.is-exploring #seed-label,.is-exploring #next,.is-exploring .auto-controls{display:none}
+.is-exploring #region-panel{bottom:164px;overflow:auto}
+#explore-hierarchy h3{font-size:14px;margin:18px 0 8px}#explore-hierarchy label{font-size:12px;display:block;margin:12px 0}
+#hierarchy-tree{max-height:340px;overflow:auto;border-top:1px solid var(--line);padding-top:8px}
+.hierarchy-children{padding-left:12px;border-left:1px solid var(--line);margin-left:5px}.hierarchy-node summary{cursor:pointer}.hierarchy-node button{font-size:11px;padding:6px 4px;text-align:left;border:0;background:transparent;color:var(--ink);max-width:90%;vertical-align:middle}.hierarchy-node button[aria-pressed=true]{background:color-mix(in srgb,var(--accent) 18%,var(--surface));font-weight:700}
+.is-exploring #search-results{max-height:180px;overflow:auto}
+@media(max-width:760px){
+ .camera-views{right:12px;left:auto;bottom:122px;transform:none}.auto-controls{bottom:82px;right:12px}.auto-controls small{max-width:230px}
+ .scene-actions{display:flex;flex-direction:row;gap:4px;left:12px;right:12px;bottom:46px;width:auto;transform:none}.scene-actions button{width:auto;flex:1;font-size:10px;padding:7px 4px}
+ .is-exploring #region-panel{bottom:164px}#just-explore{margin-bottom:12px}.home-content h1{margin-top:10px;margin-bottom:16px}.home-start{margin-bottom:16px}
+}

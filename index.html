@@ -35,6 +35,7 @@
       <div class="home-content">
         <h1>BRAIN PARTY</h1>
         <div class="home-start"><button id="start-game" class="primary" disabled>Start</button><button id="continue-game" hidden>Resume</button></div>
+        <button id="just-explore" aria-pressed="false">Just explore <small>Explore the assembled brain</small></button>
         <h2 class="challenge-label" id="difficulty-label">Difficulty</h2>
         <div class="difficulty-cards" role="group" aria-labelledby="difficulty-label">
           <button data-mode="easy" aria-pressed="false"><strong>Easy</strong><small>15 regions</small></button>
@@ -63,6 +64,7 @@
         <button id="focus">Focus selected <kbd>F</kbd></button
         ><button id="next">Find a loose piece</button>
       </div>
+      <section id="explore-hierarchy" hidden><h3>Region hierarchy</h3><p class="small">Select a region to highlight its subregions. Expand arrows to go deeper.</p><label><input type="checkbox" id="isolate-region"> Show selected region only</label><div id="hierarchy-tree"></div></section>
       <div class="physics-controls">
         <label
           ><input id="gravity" type="checkbox" checked /> Gravity
@@ -105,6 +107,7 @@
       <p id="slice-orientation">Dorsal ↑ · Left–right ↔</p>
       <p id="slice-hover" aria-live="polite">Hover over a section</p>
       <canvas id="slice-canvas" width="600" height="500" aria-label="Anatomical sections of joined and selected regions"></canvas>
+      <section class="marker-readout"><strong>Atlas marker · mm</strong><output id="marker-coordinates">ML — · DV — · AP —</output><small>CCF volume origin, not bregma. Move over the slice; click to pin.</small><button id="marker-unpin" hidden>Unpin marker</button></section>
       <label for="slice-depth">Explore slices</label><input id="slice-depth" type="range" min="-6" max="6" step="0.025" value="0">
       <output id="slice-location" for="slice-depth"></output>
       <button id="slice-focus">Find selected in 2D</button>
