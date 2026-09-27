@@ -5,8 +5,9 @@
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <meta name="description" content="Rebuild a real mouse brain in a 3D anatomical puzzle. Play directly in your browser with 15, 324, or 671 regions." />
     <meta name="theme-color" content="#080d1c" />
-    <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
-    <title>Brain Part(s)y · A 3D brain puzzle</title>
+
+    <link rel="icon" href="./circle.svg" type="image/svg+xml" />
+    <title>Brain Party · A 3D brain puzzle</title>
 
     <script type="module" src="/src/main.js"></script>
   </head>
@@ -22,8 +23,7 @@
     </button>
     <header>
       <button class="brand" id="brand-home">
-        <span class="brand-icon">◈</span> BRAIN PART(S)Y
-        <small>THE BRAIN, PIECE BY PIECE</small>
+        BRAIN PARTY
       </button>
       <div class="atlas-tag"><i></i> ALLEN CCFv3 <span>25 µm</span></div>
       <nav>
@@ -31,48 +31,22 @@
         ><button id="help" class="quiet">How to play <span>?</span></button>
       </nav>
     </header>
-    <main id="home-screen"><img class="brain-preview" src="./brain-preview.png" alt="Colored anatomical regions of the Allen mouse brain" width="720" height="720" />
+    <main id="home-screen">
       <div class="home-content">
-        <div class="eyebrow">PUT YOUR HEAD TOGETHER</div>
-        <h1>Every part<br /><em>plays a part.</em></h1>
-        <p class="home-intro">
-          Watch a whole brain become a whirlwind of pieces. Bring them back
-          together on solid ground.
-        </p>
-        <div class="eyebrow challenge-label">CHOOSE YOUR VOYAGE</div>
-        <div class="difficulty-cards" role="group" aria-label="Difficulty">
-          <button data-mode="easy" class="active" aria-pressed="true">
-            <span>01</span><strong>Shallows</strong
-            ><small>Easy · 15 regions</small>
-            <p>The broad divisions.<br />A place to begin.</p></button
-          ><button data-mode="medium" aria-pressed="false">
-            <span>02</span><strong>Open water</strong
-            ><small>Medium · 324 regions</small>
-            <p>Go beneath the surface.<br />Explore the hierarchy.</p></button
-          ><button data-mode="hard" aria-pressed="false">
-            <span>03</span><strong>The deep</strong
-            ><small>Hard · 671 regions</small>
-            <p>Every labeled region.<br />The full expedition.</p>
-          </button>
+        <h1>BRAIN PARTY</h1>
+        <div class="home-start"><button id="start-game" class="primary" disabled>Start</button><button id="continue-game" hidden>Resume</button></div>
+        <h2 class="challenge-label" id="difficulty-label">Difficulty</h2>
+        <div class="difficulty-cards" role="group" aria-labelledby="difficulty-label">
+          <button data-mode="easy" aria-pressed="false"><strong>Easy</strong><small>15 regions</small></button>
+          <button data-mode="medium" aria-pressed="false"><strong>Medium</strong><small>324 regions</small></button>
+          <button data-mode="hard" aria-pressed="false"><strong>Hard</strong><small>671 regions</small></button>
         </div>
-        <div class="home-options">
-          <span class="ground-badge">● Gravity starts on</span
-          ><span>Ground-plane dragging · Optional height assist</span>
-        </div>
-        <div class="home-start">
-          <button id="start-game" class="primary">
-            Begin voyage <span>↗</span></button
-          ><button id="continue-game" hidden>Resume voyage →</button>
-        </div>
-        <p class="home-note">Real anatomy. Your own pace. No installation. <a href="./THIRD_PARTY_NOTICES.txt" target="_blank" rel="noopener">Credits &amp; atlas</a></p>
-      </div>
-      <div class="home-caption">
-        <span class="eyebrow">ONE BRAIN. HUNDREDS OF CONNECTIONS.</span>
-        <p>Allen mouse brain atlas · 25 µm source data</p>
+        <div class="preview-frame"><img id="difficulty-preview" src="./previews/ocean-easy.png" alt="Rotating whole brain" width="360" height="300" /><canvas id="brain-turntable" width="360" height="300" aria-label="Rotating whole brain" hidden></canvas></div>
+        <label class="theme-control" for="theme">Theme <select id="theme"><option value="ocean">Ocean</option><option value="sand">Beige</option></select></label>
       </div>
     </main>
     <aside id="region-panel" class="panel game-ui">
-      <div class="eyebrow" id="voyage-label">YOUR VOYAGE</div>
+      <div class="eyebrow" id="voyage-label">YOUR PUZZLE</div>
       <p id="level-description" class="muted">Broad anatomical divisions</p>
       <label for="region-search">Find a region</label
       ><input
@@ -80,14 +54,14 @@
         placeholder="Name, acronym or Allen ID…"
         autocomplete="off"
       />
-      <div id="search-results"></div>
+      <div id="search-results"></div><div id="highlighted-regions" aria-label="Highlighted regions"></div><button id="clear-highlights" hidden>Clear search highlights</button>
       <div class="selection">
-        <span class="eyebrow" id="selection-tag">YOUR REFERENCE PIECE</span>
+        <span class="eyebrow" id="selection-tag">SELECTED REGION</span>
         <h2 id="region-name">Loading the atlas…</h2>
         <p id="region-path">Preparing anatomical surfaces</p>
         <div id="region-detail"></div>
         <button id="focus">Focus selected <kbd>F</kbd></button
-        ><button id="next">Find an unplaced piece</button>
+        ><button id="next">Find a loose piece</button>
       </div>
       <div class="physics-controls">
         <label
@@ -98,7 +72,7 @@
           assist</label
         >
         <p>
-          Drag across the ground. Correct neighbors glow when a fit is close.
+          Drag across the ground. Correct neighbors glow when a fit is close. Floating pieces stop at the upper limit.
         </p>
         <fieldset id="height-control">
           <legend>Lift or lower selected piece</legend>
@@ -119,9 +93,25 @@
       <button id="shuffle" class="primary">
         Shuffle loose pieces <span>⤨</span>
       </button>
-      <p class="shuffle-note">Connected pieces stay exactly where they are.</p>
+      <p class="shuffle-note">Shuffle leaves connected clusters untouched.</p>
       <p class="small" id="seed-label"></p>
       <p id="save-status" role="status">Progress saves on this browser</p>
+    </aside>
+    <button id="slices-toggle" class="game-ui" aria-controls="slice-panel" aria-expanded="false">2D slices</button>
+    <aside id="slice-panel" class="slice-panel game-ui" aria-label="Linked anatomical slice viewer">
+      <div class="slice-heading"><div><span class="eyebrow">YOUR ASSEMBLY · IN SECTION</span><h2>Inside the brain</h2></div></div>
+      <label for="slice-axis">Section plane</label>
+      <select id="slice-axis"><option value="2">Coronal</option><option value="0">Sagittal</option><option value="1">Horizontal</option></select>
+      <p id="slice-orientation">Dorsal ↑ · Left–right ↔</p>
+      <p id="slice-hover" aria-live="polite">Hover over a section</p>
+      <canvas id="slice-canvas" width="600" height="500" aria-label="Anatomical sections of joined and selected regions"></canvas>
+      <label for="slice-depth">Explore slices</label><input id="slice-depth" type="range" min="-6" max="6" step="0.025" value="0">
+      <output id="slice-location" for="slice-depth"></output>
+      <button id="slice-focus">Find selected in 2D</button>
+      <label class="slice-option"><input type="checkbox" id="slice-plane"> Show this plane on selected 3D cluster</label>
+      <label class="slice-option"><input type="checkbox" id="xray"> X-ray selection: fade other regions</label>
+      <p id="slice-caption" aria-live="polite">Connect any neighbors to fill your anatomical reference.</p>
+      <small>Mesh-derived cross-sections in atlas position. Faint outlines show the remaining anatomy; this is not raw tissue imaging.</small>
     </aside>
     <div class="stats game-ui">
       <div class="completion-block">
@@ -141,7 +131,7 @@
         </div>
         <div class="completion-detail">
           <span id="progress-detail">0 connections</span
-          ><span id="docked-count">0 regions docked</span>
+          ><span id="docked-count">0 regions joined</span>
         </div>
       </div>
       <div class="time-block">
@@ -162,6 +152,9 @@
       ><button id="brain-view">View brain</button
       ><button id="hint">Guide selected</button>
     </div>
+    <div class="camera-views game-ui" role="group" aria-label="Camera views"><button data-view="default">Default 3D</button><button data-view="xy">XY</button><button data-view="yz">YZ</button><button data-view="zx">ZX</button></div>
+    <div class="auto-controls game-ui"><button id="auto-complete">Auto-complete</button><small id="auto-status" aria-live="polite"></small></div>
+    <div id="party-banner" class="party-banner" hidden role="status"><strong>Brain Party! 🎉</strong><span>Spin, jump, celebrate.</span><button id="stop-party">Explore the brain</button></div>
     <div id="tooltip" hidden></div>
     <div id="toast" role="status" aria-live="polite"></div>
     <footer class="game-ui">
@@ -175,7 +168,7 @@
     </footer>
     <div id="loading" class="overlay">
       <div>
-        <span class="brand-icon">◈</span>
+
         <h2>Opening the atlas</h2>
         <button id="retry-load" hidden>Retry download</button
         ><button id="cancel-load" hidden>Back to menu</button>
@@ -184,7 +177,7 @@
     </div>
     <dialog id="help-dialog">
       <button class="close" id="close-help" aria-label="Close help">×</button>
-      <div class="eyebrow">WELCOME TO BRAIN PART(S)Y</div>
+      <div class="eyebrow">WELCOME TO BRAIN PARTY</div>
       <h2>A little more grounded.</h2>
       <p>
         Each puzzle begins assembled, separates, swirls in a tornado, then falls
@@ -204,8 +197,7 @@
         </li>
         <li>
           <b>Gravity starts on.</b> Released pieces and floating clusters settle
-          on the floor. Turn it off to hold lifted pieces in midair. The floor
-          remains solid in either mode.
+          on the floor. Turn it off for a slow upward drift: smaller regions rise faster. Pieces stop at the floating ceiling. The floor and play-area boundary remain solid in either mode.
         </li>
         <li>
           <b>Height assist</b> matches vertical placement when a true neighbor
@@ -214,8 +206,7 @@
         </li>
         <li>
           A <b>sparkle and confirmation</b> mean a correct connection. Joined
-          pieces stay together and move as one. The largest reference region
-          stays anchored.
+          pieces stay together and move as one. Every cluster remains movable. Start with any neighboring pair.
         </li>
         <li>
           <b>Shuffle loose pieces</b> moves only unconnected pieces. Joined
@@ -224,8 +215,7 @@
       </ul>
       <p>
         The completion bar counts connections, including floating clusters. The
-        smaller docked count shows how many regions have joined the anchored
-        brain. Every piece must be connected to finish.
+        joined-region count shows how many regions belong to a connected cluster. Every piece must be connected to finish.
       </p>
       <p>
         The timer starts on your first move or shuffle after the opening. Menu
@@ -239,18 +229,23 @@
       <div class="eyebrow">EVERY REGION. RECONNECTED.</div>
       <h2>Beautifully connected.</h2>
       <p id="completion-text"></p>
-      <button id="play-again" class="primary">Choose another voyage ↗</button
-      ><button id="inspect-complete">Explore completed brain</button>
+      <button id="play-again" class="primary">Main menu</button
+      ><button id="inspect-complete">Explore completed brain</button><button id="replay-party">Replay the party</button>
     </dialog>
     <div id="paused" class="overlay" hidden>
       <div>
         <div class="eyebrow">TAKE YOUR TIME</div>
         <h2>A moment of quiet.</h2>
         <p>Your timer, opening animation and gravity are paused.</p>
-        <button id="resume" class="primary">Resume voyage</button
+        <button id="resume" class="primary">Resume</button
         ><button id="pause-menu">Main menu</button>
       </div>
     </div>
+    <dialog id="restart-dialog" aria-labelledby="restart-title">
+      <h2 id="restart-title">Start a new puzzle?</h2>
+      <p>Your current puzzle will be replaced. Cancel to keep it and resume.</p>
+      <button id="restart-confirm" class="primary">Start new puzzle</button><button id="restart-cancel">Cancel</button>
+    </dialog>
     <dialog id="tutorial-dialog" aria-labelledby="tutorial-title">
       <p class="eyebrow" id="tutorial-count"></p>
       <h2 id="tutorial-title"></h2>

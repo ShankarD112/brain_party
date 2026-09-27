@@ -22,12 +22,14 @@ test("scatter is reproducible for a seed, differs across seeds, and is truly 3D"
 });
 test("nearby non-neighbors never snap", () => {
   const p = new Puzzle(fixture);
+  p.move(1, [0, 0, 0]);
   p.move(3, [0, 0, 0]);
   assert.equal(p.snap(3, 0.2), 0);
-  assert.equal(p.placed, 1);
+  assert.equal(p.placed, 0);
 });
 test("true neighbors must also have anatomically correct relative placement", () => {
   const p = new Puzzle(fixture);
+  p.move(1, [0, 0, 0]);
   p.move(2, [2, 0, 0]);
   assert.equal(p.snap(2, 0.2), 0);
   p.move(2, [0.1, 0, 0]);
@@ -43,21 +45,24 @@ test("floating clusters join and move together before docking", () => {
   assert.equal(p.group(3), p.group(4));
   p.move(4, [0, 0, 0]);
   assert.deepEqual(p.group(3).offset, [0, 0, 0]);
-  assert.equal(p.placed, 1);
+  assert.equal(p.placed, 2);
+  p.move(1, [0, 0, 0]);
   p.move(2, [0.1, 0, 0]);
   p.snap(2, 0.2);
   assert.ok(p.complete);
 });
-test("chained joins never translate the anchored cluster away from the origin", () => {
+test("completed assemblies remain movable and have no fixed reference", () => {
+
   const p = new Puzzle(fixture);
+  p.move(1, [0, 0, 0]);
   p.move(2, [0.1, 0, 0]);
   p.move(3, [0.15, 0, 0]);
   p.move(4, [0.19, 0, 0]);
   p.snap(2, 0.2);
   assert.ok(p.complete);
-  assert.deepEqual(p.group(1).offset, [0, 0, 0]);
-  p.move(1, [99, 99, 99]);
-  assert.deepEqual(p.group(1).offset, [0, 0, 0]);
+  assert.ok([...p.groups.values()].every(g=>!g.anchored));
+  p.move(1, [9, 3, 2]);
+  assert.deepEqual(p.group(4).offset, [9, 3, 2]);
 });
 let volume;
 for (const mode of ["easy", "medium", "hard"])
@@ -94,17 +99,34 @@ for (const mode of ["easy", "medium", "hard"])
     let safety = d.pieces.length;
     while (!puzzle.complete && safety--) {
       const edge = d.edges.find(
-        ([a, b]) => puzzle.group(a).anchored !== puzzle.group(b).anchored,
+        ([a, b]) => puzzle.group(a) !== puzzle.group(b),
       );
       assert.ok(
         edge,
-        "Every remaining piece must have a path to the anchored assembly",
+        "Every remaining piece must have a path to another cluster",
       );
-      const id = puzzle.group(edge[0]).anchored ? edge[1] : edge[0];
-      puzzle.move(id, [0.02, 0, 0]);
+      const id = edge[0];
+      const target=puzzle.group(edge[1]).offset;
+      puzzle.move(id, [target[0]+0.02,target[1],target[2]]);
       puzzle.snap(id, 0.1);
     }
     assert.ok(puzzle.complete);
     assert.equal(puzzle.groups.size, 1);
-    assert.equal(distance(puzzle.group(d.pieces[0].id).offset, [0, 0, 0]), 0);
+    assert.ok([...puzzle.groups.values()].every(g=>!g.anchored));
   });
+
+
+test('auto-complete animates exactly one cluster per step, pauses, and preserves joins', async()=>{
+ const {AutoComplete}=await import('../src/autocomplete.js');
+ const p=new Puzzle(fixture,17);
+ p.move(1,[0,0,0]);p.move(2,[.01,0,0]);p.snap(2,.1);
+ const cluster=p.group(1),joins=[];
+ const auto=new AutoComplete(p,id=>joins.push(id));auto.start();auto.tick(.1);
+ assert.equal(p.groups.size,3);assert.equal(p.group(1),cluster);
+ const moving=auto.step.moving,mid=[...moving.offset];
+ assert.notDeepEqual(mid,auto.step.from);assert.notDeepEqual(mid,auto.step.to);
+ auto.stop();auto.tick(5);assert.deepEqual(moving.offset,mid);
+ auto.start();auto.tick(.35);assert.equal(p.groups.size,2);assert.equal(joins.length,1);
+ assert.equal(p.group(1),p.group(2));auto.tick(.35);
+ assert.ok(p.complete);assert.equal(joins.length,2);assert.equal(auto.active,false);
+});
