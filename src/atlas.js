@@ -1,6 +1,11 @@
-// Only the requested level is fetched; gzip is decoded explicitly so static hosts
-// need no special Content-Encoding configuration. Cache only one level in memory.
+// Hosts may serve .gz as a file or an HTTP content encoding. Fetch already
+// decodes the latter, so inspect the body before decompressing it again.
 let cached;
+export async function decodeGeometry(blob) {
+  const header = new Uint8Array(await blob.slice(0, 2).arrayBuffer());
+  if (header[0] !== 0x1f || header[1] !== 0x8b) return blob.arrayBuffer();
+  return new Response(blob.stream().pipeThrough(new DecompressionStream("gzip"))).arrayBuffer();
+}
 export async function loadAtlas(mode, onProgress = () => {}) {
   if (!["easy", "medium", "hard"].includes(mode))
     throw new Error("Unknown difficulty");
@@ -23,10 +28,7 @@ export async function loadAtlas(mode, onProgress = () => {}) {
     received += value.byteLength;
     onProgress(received);
   }
-  const stream = new Blob(parts)
-    .stream()
-    .pipeThrough(new DecompressionStream("gzip"));
-  const buffer = await new Response(stream).arrayBuffer();
+  const buffer = await decodeGeometry(new Blob(parts));
   const expected = Math.max(
     ...data.pieces.map((p) => p.offset + p.vertices * 12 + p.triangles * 12),
   );

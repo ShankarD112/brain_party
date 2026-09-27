@@ -18,6 +18,10 @@ jobs:
       - run: npm ci
       - run: npm test
       - run: npm run build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: brain-party-website
+          path: dist/
       - run: npx playwright install --with-deps chromium
       - run: npm run test:browser
       - uses: actions/upload-artifact@v4
@@ -25,7 +29,3 @@ jobs:
         with:
           name: browser-checks
           path: test-results/
-      - uses: actions/upload-artifact@v4
-        with:
-          name: brain-party-website
-          path: dist/

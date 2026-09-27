@@ -1,5 +1,11 @@
 import { test, expect } from "@playwright/test";
 
+test.beforeEach(async ({ page }) => {
+  page.on("console", msg => { if (msg.type() === "error") console.error("Browser:", msg.text()); });
+  page.on("requestfailed", request => console.error("Request failed:", request.url(), request.failure()?.errorText));
+  page.on("pageerror", error => console.error("Page error:", error.message));
+});
+
 async function begin(page, mode = "easy") {
   await page.goto("/?test");
   await page.locator(`[data-mode="${mode}"]`).click();
