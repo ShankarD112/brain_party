@@ -147,12 +147,13 @@ test("old sessions migrate to movable clusters",()=>{
  assert.deepEqual(restored.group(1).offset,[1,2,3]);
 });
 
-test('gravity-off drift and manual lifting both respect the floating ceiling',()=>{
+test('drift settles low while the shared ceiling permits anatomical assembly',()=>{
  const p=new Puzzle(data),world=new Physics(p,bounds,3);world.skipIntro();world.gravity=false;
- const g=p.group(4),ceiling=world.floorOffset(g)+3;
- world.move(4,[0,1e6,0]);assert.equal(g.offset[1],ceiling);
- for(let i=0;i<1000;i++)world.tick(.1);
- assert.equal(g.offset[1],ceiling);
- world.move(4,[0,ceiling-.01,0]);world.tick(100);
- assert.ok(g.offset[1]<=ceiling);
+ const g=p.group(4),floatLimit=world.floorOffset(g)+3;
+ world.move(4,[0,1e6,0]);assert.ok(world.groupBounds(g).max[1]<=world.ceiling);
+ world.move(4,[0,floatLimit-.01,0]);world.tick(100);
+ assert.ok(g.offset[1]<=floatLimit);
+ const extended=new Map(bounds);extended.set(4,{min:[0,8,0],max:[1,9,1],area:1});
+ const other=new Physics(new Puzzle(data),extended,1);other.skipIntro();
+ for(const group of other.puzzle.groups.values())assert.equal(other.constrain(group,[0,0,0])[1],0);
 });

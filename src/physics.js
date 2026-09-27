@@ -9,6 +9,7 @@ class Physics {
       (this.puzzle = t),
       (this.bounds = e),
       (this.floor = Math.min(...[...e.values()].map((r) => r.min[1])) - 0.15),
+      (this.ceiling = Math.max(...[...e.values()].map(b => b.max[1])) + 3),
       (this.gravity = true),
       (this.heightAssist = true),
       (this.velocity = /* @__PURE__ */ new Map()),
@@ -170,7 +171,7 @@ class Physics {
         else {
           this.velocity.set(r.id, 0);
           const room = Math.max(0, this.floorOffset(r) + 3 - r.offset[1]);
-          r.offset[1] += this.driftSpeed(r) * t * Math.min(1, room);
+          if(room>0)r.offset[1] = Math.min(this.floorOffset(r)+3, r.offset[1] + this.driftSpeed(r) * t * Math.min(1, room));
         }
         r.offset = this.constrain(r, r.offset);
       }
@@ -192,7 +193,7 @@ class Physics {
     const local = this.groupBounds({...group, offset:[0,0,0]});
     const result = [...offset];
     for (const axis of [0,2]) result[axis] = Math.max(-this.arenaHalf-local.min[axis], Math.min(this.arenaHalf-local.max[axis], result[axis]));
-    result[1] = Math.max(this.floorOffset(group), Math.min(this.floorOffset(group)+3, result[1]));
+    result[1] = Math.max(this.floorOffset(group), Math.min(this.ceiling-local.max[1], result[1]));
     return result;
   }
   move(id, offset) {

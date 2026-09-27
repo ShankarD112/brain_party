@@ -153,6 +153,9 @@ for (const [mode, count] of [
   test(`${mode}: load real atlas and complete through the snapping handler`, async ({
     page,
   }) => {
+    // Rendering the 324/671-region completed atlas and its screenshot takes
+    // longer on CI's software GPU; keep every interaction assertion.
+    test.setTimeout(mode === 'easy' ? 90000 : 180000);
     const errors = [];
     page.on("pageerror", (e) => errors.push(e.message));
     await begin(page, mode);

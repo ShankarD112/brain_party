@@ -22,7 +22,7 @@ Choose a difficulty and **Start**. Skip the opening if desired.
 
 - Drag a loose region across the ground. Drag empty space to orbit; scroll to zoom.
 - **E / Q** lift/lower; arrow keys move across the ground. **Shift** makes finer steps; **F** focuses the selection. Lift/Lower buttons also support press-and-hold.
-- Gravity starts on. Turn it off for gentle upward drift; small-volume regions rise faster than larger regions or joined clusters. Holding a piece pauses its drift. Floating pieces stop three atlas units above their floor position. Both drift and manual lifting respect this ceiling. The floor and finite board keep pieces within reach.
+- Gravity starts on. Turn it off for gentle upward drift; small-volume regions rise faster than larger regions or joined clusters. Holding a piece pauses its drift. Floating pieces stop three atlas units above their floor position. Manual lifting has a shared ceiling above the full atlas, so the height limit never prevents anatomical assembly. The floor and finite board keep pieces within reach.
 - With height assist on, a true anatomical neighbor glows gold when close enough horizontally. Release or press Enter to connect. Turn assistance off for manual vertical alignment.
 - Search finds regions by name, acronym, or Allen ID. Click successive results to keep multiple regions highlighted in both views; remove individual chips or clear the search highlights. X-ray selection keeps highlighted surfaces opaque and dims the surrounding anatomy. Placement guides mark the anatomical target.
 - Start with any neighboring pair: there is no fixed core. Joined clusters remain movable, even after completion. Shuffle moves only unconnected pieces.
