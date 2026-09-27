@@ -12,7 +12,7 @@ This imports the attached Neurospace game into `ShankarD112/brain_party`. Ground
 - **Skippable tutorial**, keyboard controls, and an expandable region/control panel on narrow screens.
 - **Restartable downloads:** a failed atlas request shows Retry and Back to menu.
 
-This remains a single-player puzzle. Shared rooms, accounts, online leaderboards, and multiplayer are not implemented. The repository remains private; this branch does not publish a live website automatically.
+This remains a single-player puzzle. Shared rooms, accounts, online leaderboards, and multiplayer are not implemented. The source repository may remain private while the built website is deployed publicly.
 
 ## Play
 
@@ -83,4 +83,8 @@ The script emits the compressed binary files consumed by the web app. The option
 - `public/data/`: meshes, region metadata, and provenance.
 - `tests/`: atlas, rule, session, physics, and browser checks.
 
-No public distribution license is assigned to the application code. Third-party dependency and atlas terms remain applicable.
+## License
+
+The application code in this repository is licensed under the [MIT License](LICENSE).
+
+Third-party dependencies, Allen Institute atlas data, and derived atlas assets remain subject to their respective licenses, terms, and citation requirements. See [THIRD_PARTY_NOTICES.txt](THIRD_PARTY_NOTICES.txt) and [docs/ATLAS.md](docs/ATLAS.md).
