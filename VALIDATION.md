@@ -1,6 +1,6 @@
 # Current exploration update
 
-27 unit/data tests and the production build pass locally. New Chromium scenarios cover saved-puzzle preservation, parent acronym search, isolation, hierarchy navigation, crosshair coordinates, pinning and plane changes. Browser CI is pending for this update.
+27 unit/data tests and the production build pass. Both new Chromium scenarios passed at `dd203d85a072e61a61b5b3b9c04ad80e9f7def23` in [run 36357815415](https://github.com/ShankarD112/brain_party/actions/runs/36357815415): saved-puzzle preservation and resumption, parent acronym search, isolation, hierarchy navigation, crosshair coordinates, pinning, and plane changes. Their screenshots were inspected. The broader 11-scenario regression step is still running.
 
 # Validation
 
