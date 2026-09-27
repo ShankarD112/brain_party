@@ -95,6 +95,10 @@ The script emits the compressed binary files consumed by the web app. The option
 - `public/data/`: meshes, region metadata, and provenance.
 - `tests/`: atlas, rule, session, physics, and browser checks.
 
-No public distribution license is assigned to the application code. Third-party dependency and atlas terms remain applicable.
+## License
+
+The application code in this repository is licensed under the [MIT License](LICENSE).
+
+Third-party dependencies, Allen Institute atlas data, and derived atlas assets remain subject to their respective licenses, terms, and citation requirements. See [THIRD_PARTY_NOTICES.txt](THIRD_PARTY_NOTICES.txt) and [docs/ATLAS.md](docs/ATLAS.md).
 
 The lightweight real-time homepage meshes are regenerated with `python scripts/build_preview_meshes.py` (NumPy required). Static PNG posters remain available as a graphics fallback.
