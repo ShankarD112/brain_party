@@ -28,6 +28,7 @@ test("lazy loading, tutorial, keyboard, genuine dragging, save/resume, shuffle, 
   await page.goto("/?test");
   await expect(page.locator("#start-game")).toBeVisible();
   expect(requests).toEqual([]);
+  await page.locator("[data-mode=easy]").click();
   await page.locator("#start-game").click();
   await expect(page.locator("#loading")).toBeHidden({ timeout: 60000 });
   await page.locator("#skip-intro").click();
@@ -181,7 +182,7 @@ for (const [mode, count] of [
       await page.evaluate(() => localStorage.getItem("brain-party-session-v1")),
     ).toBeNull();
     await page.locator("#inspect-complete").click();
-    expect(await page.evaluate(()=>!!window.__TEST__.party.props)).toBe(true);
+    expect(await page.evaluate(()=>!!window.__TEST__.party.props)).toBe(false);
     const old=await page.evaluate(()=>[...window.__TEST__.puzzle.group(window.__TEST__.selected).offset]);
     await page.keyboard.down('ArrowLeft');await page.waitForTimeout(250);await page.keyboard.up('ArrowLeft');
     expect(await page.evaluate(()=>window.__TEST__.puzzle.group(window.__TEST__.selected).offset)).not.toEqual(old);
@@ -199,6 +200,7 @@ test("a failed atlas request has a working retry", async ({ page }) => {
     return route.continue();
   });
   await page.goto("/?test");
+  await page.locator("[data-mode=easy]").click();
   await page.locator("#start-game").click();
   await expect(page.locator("#retry-load")).toBeVisible();
   await page.locator("#retry-load").click();
@@ -246,8 +248,9 @@ test('free clusters, bounded movement, linked slices, and cross-view highlightin
   });
   expect(info.size).toBeGreaterThan(1);
   await expect(page.locator('#slice-caption')).toContainText('joined regions');
-  await expect(page.locator('#region-name')).toHaveText(info.name);
+  await expect(page.locator('#region-name')).toContainText(info.name);
   await expect.poll(()=>page.evaluate(()=>window.__TEST__.slices.hitPaths.length)).toBeGreaterThan(0);
+  await page.locator('#xray').check();
   const focus=await page.evaluate(({a,b})=>{
     const t=window.__TEST__;
     return {selected:t.meshes.get(a).material.emissiveIntensity,other:t.meshes.get(b).material.opacity,anchored:t.puzzle.group(a).anchored};
@@ -290,10 +293,14 @@ test('minimal home, animated previews, theme persistence, menu resume and diffic
  await expect(page.locator('#home-screen h1')).toHaveText('BRAIN PARTY');
  await expect(page.locator('#start-game')).toHaveText('Start');
  await expect(page.locator('#continue-game')).toBeHidden();
- await page.locator('#theme').selectOption('midnight');
- await expect(page.locator('body')).toHaveAttribute('data-theme','midnight');
- await page.reload();await expect(page.locator('#theme')).toHaveValue('midnight');
+ await expect(page.locator('#theme')).toHaveValue('ocean');
+ await expect(page.locator('#theme option')).toHaveCount(2);
+ await expect(page.locator('[data-mode][aria-pressed=true]')).toHaveCount(0);
+ await expect(page.locator('#start-game')).toBeDisabled();
+ await expect(page.locator('#brain-turntable')).toHaveAttribute('aria-label','Rotating whole brain');
  await page.locator('#theme').selectOption('sand');
+ await page.reload();await expect(page.locator('#theme')).toHaveValue('sand');
+ await page.locator('[data-mode=easy]').click();
  await page.locator('#start-game').click();
  await expect(page.locator('#loading')).toBeHidden({timeout:60000});
  await page.locator('#tutorial-skip').click();
@@ -312,7 +319,8 @@ test('minimal home, animated previews, theme persistence, menu resume and diffic
  await page.locator('[data-mode=medium]').hover();
  // Motion preference is sampled at boot; a reload enables animated posters.
  await page.reload();await page.locator('[data-mode=medium]').hover();
- await expect(page.locator('#difficulty-preview')).toHaveAttribute('src',/sand-medium.gif$/);
+ await expect(page.locator('#brain-turntable')).toHaveAttribute('aria-label','medium difficulty brain');
+ await expect(page.locator('#brain-turntable')).toBeVisible({timeout:15000});
  await page.locator('[data-mode=medium]').click();
  await page.locator('#start-game').click();
  await expect(page.locator('#restart-dialog')).toBeVisible();
@@ -328,6 +336,8 @@ test('minimal home, animated previews, theme persistence, menu resume and diffic
 
 test('search preserves multiple high-contrast highlights in 2D and 3D',async({page})=>{
  await begin(page);
+ await expect(page.locator('#xray')).not.toBeChecked();
+ await page.locator('#xray').check();
  for(const name of ['Medulla','Thalamus']){
   await page.locator('#region-search').fill(name);
   await page.locator('#search-results button').filter({hasText:new RegExp('^'+name+'$')}).click();
@@ -337,10 +347,53 @@ test('search preserves multiple high-contrast highlights in 2D and 3D',async({pa
   return {ids,highlighted:ids.map(id=>({opacity:t.meshes.get(id).material.opacity,depthTest:t.meshes.get(id).material.depthTest})),other:[...t.meshes].filter(([id])=>!ids.includes(id)).map(([,m])=>m.material.opacity),linked:ids.every(id=>t.slices.highlights.has(id))};
  });
  expect(result.ids).toHaveLength(2);expect(result.linked).toBe(true);
- expect(result.highlighted.every(m=>m.opacity===1&&!m.depthTest)).toBe(true);
+ expect(result.highlighted.every(m=>m.opacity===1&&m.depthTest)).toBe(true);
  expect(result.other.every(o=>o<.05)).toBe(true);
  await expect(page.locator('#highlighted-regions button')).toHaveCount(2);
  await page.screenshot({path:'test-results/multiple-highlights.png'});
  await page.locator('#clear-highlights').click();
  expect(await page.evaluate(()=>window.__TEST__.highlights.size)).toBe(0);
+});
+
+test('auto-complete skips celebration and camera views permit underside exploration',async({page})=>{
+ await begin(page);
+ expect(await page.evaluate(()=>window.__TEST__.controls.maxPolarAngle)).toBe(Math.PI);
+ for(const [view,axis] of [['xy','z'],['yz','x'],['zx','y']]){
+  await page.locator(`[data-view=${view}]`).click();
+  const direction=await page.evaluate(()=>window.__TEST__.camera.position.clone().sub(window.__TEST__.controls.target).normalize().toArray());
+  expect(direction['xyz'.indexOf(axis)]).toBeGreaterThan(.99);
+ }
+ await page.locator('[data-view=default]').click();
+ await page.locator('#auto-complete').click();
+ await expect(page.locator('#complete-dialog')).toBeVisible({timeout:30000});
+ await expect(page.locator('#progress')).toHaveText('100%');
+ expect(await page.evaluate(()=>({auto:window.__TEST__.autoUsed,active:window.__TEST__.party.active,props:!!window.__TEST__.party.props}))).toEqual({auto:true,active:false,props:false});
+ await expect(page.locator('#replay-party')).toBeHidden();
+ await page.locator('#inspect-complete').click();
+ await page.screenshot({path:'test-results/auto-complete.png'});
+});
+
+test('Beige retains opaque highlights, visible X-ray context, and anatomical slice labels',async({page})=>{
+ await begin(page);
+ await page.locator('#menu').click();await page.locator('#theme').selectOption('sand');await page.locator('#continue-game').click();
+ await page.locator('#xray').check();
+ const info=await page.evaluate(()=>{
+  const t=window.__TEST__,[a,b]=t.puzzle.data.edges[0],target=t.puzzle.group(b).offset;
+  t.select(a);t.puzzle.move(a,[...target]);t.updatePositions();t.attemptSnap();t.slices.draw();
+  const material=t.meshes.get(a).material,piece=t.meshes.get(a).userData.piece;
+  return {a,b,label:piece.acronym+' · '+piece.name,opacity:material.opacity,depth:material.depthTest,emission:material.emissiveIntensity,other:t.meshes.get(b).material.opacity};
+ });
+ expect(info.opacity).toBe(1);expect(info.depth).toBe(true);expect(info.emission).toBe(.12);expect(info.other).toBe(.24);
+ await expect(page.locator('#region-name')).toHaveText(info.label);
+ for(const connected of [true,false]){
+  const hit=await page.evaluate(connected=>{
+   const t=window.__TEST__,view=t.slices,c=view.canvas,r=c.getBoundingClientRect();view.draw();
+   for(let y=0;y<c.height;y+=2)for(let x=0;x<c.width;x+=2){
+    const h=[...view.hitPaths].reverse().find(h=>view.ctx.isPointInPath(h.path,x,y,'evenodd'));
+    if(h&&h.connected===connected){const p=t.meshes.get(h.id).userData.piece;return{x:r.left+x/c.width*r.width,y:r.top+y/c.height*r.height,label:connected?p.acronym+' · '+p.name:'???'};}
+   }return null;
+  },connected);
+  expect(hit).not.toBeNull();await page.mouse.move(hit.x,hit.y);await expect(page.locator('#slice-hover')).toHaveText(hit.label);
+ }
+ await page.screenshot({path:'test-results/beige-highlights.png'});
 });

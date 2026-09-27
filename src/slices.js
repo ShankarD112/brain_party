@@ -12,11 +12,16 @@ export class SliceViewer {
     document.getElementById('slice-depth').oninput=e=>{this.level=Number(e.target.value);this.schedule();};
     document.getElementById('slice-plane').onchange=()=>this.updatePlane();
     document.getElementById('slice-focus').onclick=()=>this.focus(this.selected);
-    this.canvas.onclick=e=>{
+    const hitAt=e=>{
       const r=this.canvas.getBoundingClientRect(),x=(e.clientX-r.left)*this.canvas.width/r.width,y=(e.clientY-r.top)*this.canvas.height/r.height;
-      const hit=[...this.hitPaths].reverse().find(({path})=>this.ctx.isPointInPath(path,x,y,'evenodd'));
-      if(hit)this.onSelect(hit.id);
+      return [...this.hitPaths].reverse().find(({path})=>this.ctx.isPointInPath(path,x,y,'evenodd'));
     };
+    this.canvas.onpointermove=e=>{
+      const hit=hitAt(e),label=document.getElementById('slice-hover');
+      label.textContent=hit?(hit.connected?`${this.meshes.get(hit.id).userData.piece.acronym} · ${this.meshes.get(hit.id).userData.piece.name}`:'???'):'Hover over a section';
+    };
+    this.canvas.onpointerleave=()=>document.getElementById('slice-hover').textContent='Hover over a section';
+    this.canvas.onclick=e=>{const hit=hitAt(e);if(hit?.connected)this.onSelect(hit.id);};
     new ResizeObserver(()=>this.schedule()).observe(this.canvas);
   }
   setData(meshes,bounds,puzzle) {
@@ -70,10 +75,10 @@ export class SliceViewer {
       const path=new Path2D(),outline=new Path2D();
       for(const c of contours){const pts=c.points.map(project);for(const dest of c.closed?[path,outline]:[outline]){dest.moveTo(...pts[0]);for(const p of pts.slice(1))dest.lineTo(...p);if(c.closed)dest.closePath();}}
       const selected=id===this.selected || this.highlights?.has(id);
-      ctx.globalAlpha=selected?1:connected?(document.getElementById("xray").checked?.12:.85):.045;
+      ctx.globalAlpha=selected?1:connected?(document.getElementById("xray").checked?(this.theme?.sliceFade||.16):.85):.045;
       ctx.fillStyle=this.meshes.get(id).userData.displayColor||this.meshes.get(id).userData.piece.color;ctx.fill(path,'evenodd');
       ctx.strokeStyle=selected?(this.theme?.ink||'#fff5cc'):(this.theme?.muted||'#6a8497');ctx.lineWidth=(selected?1.7:.6)*devicePixelRatio;ctx.stroke(outline);
-      if(connected || selected)this.hitPaths.push({id,path});
+      this.hitPaths.push({id,path,connected});
       if(selected && contours.length){visibleSelected=true;if(this.highlights?.has(id))highlightedInSlice++;}
     }
     ctx.globalAlpha=1;

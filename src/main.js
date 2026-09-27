@@ -1,3 +1,5 @@
+import { BrainPreview } from "./preview.js";
+import { AutoComplete } from "./autocomplete.js";
 import { themes, regionColors } from "./themes.js";
 import { SliceViewer } from "./slices.js";
 import { BrainParty } from "./party.js";
@@ -63,7 +65,7 @@ const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
 controls.minDistance = 0.3;
 controls.maxDistance = 1e3;
-controls.maxPolarAngle = Math.PI * 0.47;
+controls.maxPolarAngle = Math.PI;
 scene.add(new HemisphereLight("#e4f4ff", "#283b40", 2.4));
 for (const [i, t, e] of [
   ["#ffffff", 2.7, [15, 30, 20]],
@@ -106,7 +108,7 @@ brainRing.rotation.x = -Math.PI / 2;
 floorRoot.add(brainRing);
 let screen = "home",
   hasGame = false,
-  chosenMode = "easy",
+  chosenMode = null,
   mode = "easy",
   busy = true,
   paused = false,
@@ -135,9 +137,11 @@ const meshes = /* @__PURE__ */ new Map(),
   hitPoint = new Vector3();
 const slices = new SliceViewer(scene, id => { select(id, true); focusSelected(); });
 const party = new BrainParty(meshRoot);
+const preview = new BrainPreview($("brain-turntable"),$("difficulty-preview"),reducedMotion);
 const highlights = new Set();
-let themeName = "sand", regionPalette = new Map();
+let themeName = "ocean", regionPalette = new Map();
 slices.highlights = highlights;
+let autoComplete, autoUsed=false;
 let boardBoundary;
 function updateBoardBoundary() {
   if(boardBoundary){scene.remove(boardBoundary);boardBoundary.geometry.dispose();boardBoundary.material.dispose();}
@@ -186,6 +190,7 @@ function saveSession() {
     elapsed,
     started,
     assisted,
+    autoUsed,
     gravity: physics.gravity,
     heightAssist: physics.heightAssist,
     guide: $("guide").checked,
@@ -302,11 +307,13 @@ function stylePieces() {
     const faded=$("xray").checked && (group?.members.size>1 || highlights.size>0) && !chosen && !party.active;
     const color=regionPalette.get(id)||mesh.userData.piece.color;
     mesh.userData.displayColor=color;mesh.material.color.set(color);
-    mesh.material.transparent=faded;mesh.material.opacity=faded?.035:1;mesh.material.depthWrite=!faded;
-    mesh.material.depthTest=!(chosen && $("xray").checked && !party.active);
-    mesh.renderOrder=chosen?3:faded?1:0;
+    mesh.material.transparent=faded;mesh.material.opacity=faded?themes[themeName].xrayOpacity:1;mesh.material.depthWrite=!faded;
+    mesh.material.depthTest=true;
+    // Draw opaque selected surfaces first, then their translucent surroundings.
+    mesh.material.depthWrite=!faded;
+    mesh.renderOrder=faded?1:0;
     mesh.material.emissive.set(chosen?color:g===snapCandidate?'#816520':id===hovered?'#274955':'#000000');
-    mesh.material.emissiveIntensity=chosen?.55:g===snapCandidate?.8:.25;
+    mesh.material.emissiveIntensity=chosen?themes[themeName].highlight:g===snapCandidate?.8:.25;
   }
 }
 function renderHighlights() {
@@ -328,7 +335,7 @@ function focusHighlights() {
   controls.update();
 }
 function applyTheme(name) {
-  themeName=themes[name]?name:'sand';const theme=themes[themeName];
+  themeName=themes[name]?name:'ocean';const theme=themes[themeName];
   document.body.dataset.theme=themeName;
   for(const key of ['background','surface','ink','muted','line','accent'])document.body.style.setProperty('--'+key,theme[key]);
   scene.background.set(theme.background);floorMesh.material.color.set(theme.floor);
@@ -337,12 +344,13 @@ function applyTheme(name) {
   if(data)regionPalette=regionColors(data,theme);
   stylePieces();slices.schedule();
   try{storage?.setItem('brain-party-theme',themeName);}catch{}
-  updatePreview(chosenMode,false);
+  updatePreview(chosenMode,true);
 }
-function updatePreview(mode,animate=false){
-  const image=$("difficulty-preview");
-  image.src=`./previews/${themeName}-${mode}.${animate&&!reducedMotion?'gif':'png'}`;
-  image.alt=`${mode[0].toUpperCase()+mode.slice(1)}: ${{easy:15,medium:324,hard:671}[mode]} brain regions`;
+function updatePreview(mode,animate=true){
+  const image=$("difficulty-preview"),level=mode||'whole';
+  image.src=`./previews/${themeName}-${mode||'easy'}.png`;image.classList.toggle('whole-brain',!mode);
+  preview.show(mode,themeName);$("brain-turntable").setAttribute('aria-label',mode?mode+' difficulty brain':'Rotating whole brain');
+  image.alt=mode?`${mode[0].toUpperCase()+mode.slice(1)}: ${{easy:15,medium:324,hard:671}[mode]} brain regions`:'Rotating whole brain';
 }
 function select(i, keepSlice = false) {
   ((selected = i), (snapCandidate = null));
@@ -351,7 +359,7 @@ function select(i, keepSlice = false) {
   (($("selection-tag").textContent = e.members.size > 1
       ? "CONNECTED CLUSTER \xB7 " + e.members.size + " REGIONS"
       : "SELECTED REGION"),
-    ($("region-name").textContent = t.name),
+    ($("region-name").textContent = t.acronym + " · " + t.name),
     ($("region-path").textContent = t.path.slice(1).join(" \u203A ")),
     ($("region-detail").textContent =
       t.acronym +
@@ -405,6 +413,12 @@ function startTimer() {
 function finish() {
   if (!puzzle.complete || completed) return;
   ((completed = true), (started = false));
+  if(autoUsed){
+    clearSession();progress();slices.schedule();party.reset();$("auto-complete").disabled=true;
+    $("auto-status").textContent='Auto-complete finished · explore freely';
+    $("completion-text").textContent='Auto-completed for exploration. This run is not timed or counted as a personal best.';
+    $("replay-party").hidden=true;$("complete-dialog").showModal();fitAll();return;
+  }
   const i =
     "brain-party-best-" + mode + "-" + (assisted ? "assisted" : "manual");
   let t = 1 / 0;
@@ -542,7 +556,7 @@ function focusSelected() {
 function setScreen(i) {
   if(party.active)party.stop();
   if(boardBoundary)boardBoundary.visible=i === "play";
-  if(i === "home"){slices.plane.visible=false;$("complete-dialog").close();}
+  if(i === "home"){autoComplete?.stop();$("auto-complete").textContent="Auto-complete";slices.plane.visible=false;$("complete-dialog").close();}
   if (i === "home") saveSession();
   for(const d of document.querySelectorAll("dialog[open]"))d.close();
   document.body.classList.remove("panel-open","slices-open");
@@ -614,7 +628,7 @@ async function newGame(i = mode, t = false, saved = null) {
     });
     const restoredPuzzle = saved ? restore(n, saved) : null;
     if (e !== loadToken) return;
-    highlights.clear();renderHighlights();
+    highlights.clear();renderHighlights();autoComplete?.stop();autoUsed=false;$("auto-complete").disabled=false;$("auto-complete").textContent="Auto-complete";$("auto-status").textContent="";$("replay-party").hidden=false;
     (disposeScene(),
       (data = n),
       (mode = i),
@@ -663,7 +677,7 @@ async function newGame(i = mode, t = false, saved = null) {
     }
     regionPalette=regionColors(data,themes[themeName]);
     physics = new Physics(puzzle, bounds, seed);
-    slices.setData(meshes,bounds,puzzle);updateBoardBoundary();
+    slices.setData(meshes,bounds,puzzle);updateBoardBoundary();makeAutoComplete();
     ((physics.gravity = true),
       (floorRoot.position.y = physics.floor),
       (grid.position.y = 0.045),
@@ -672,6 +686,7 @@ async function newGame(i = mode, t = false, saved = null) {
       ($("height-assist").checked = true),
       ($("guide").checked = false),
       ($("spotlight").checked = false),
+      ($("xray").checked = false),
       ($("region-search").value = ""),
       $("search-results").replaceChildren(),
       ($("fit-cue").hidden = true),
@@ -703,6 +718,7 @@ async function newGame(i = mode, t = false, saved = null) {
       physics.skipIntro();
       puzzle = restoredPuzzle;
       physics.puzzle = puzzle;
+      autoUsed=!!saved.autoUsed;makeAutoComplete();
       slices.puzzle = puzzle;
       for(const g of puzzle.groups.values())g.offset=physics.constrain(g,g.offset);
       physics.velocity.clear();
@@ -761,7 +777,7 @@ function canInteract() {
     !paused &&
     !document.querySelector("dialog[open]") &&
     screen === "play" &&
-    !physics.intro && !party.active
+    !physics.intro && !party.active && !autoComplete?.active
   );
 }
 renderer.domElement.addEventListener(
@@ -851,7 +867,7 @@ $("continue-game").onclick = () => {
   else if (savedSession) newGame(savedSession.mode, false, savedSession);
 };
 $("start-game").onclick = () => {
-  if (busy) return;
+  if (busy || !chosenMode) return;
   if ((hasGame && !completed) || savedSession) {
     $("restart-dialog").showModal();
     return;
@@ -862,7 +878,7 @@ $("restart-confirm").onclick=()=>{$("restart-dialog").close();newGame(chosenMode
 $("restart-cancel").onclick=()=>$("restart-dialog").close();
 for (const i of document.querySelectorAll("[data-mode]"))
   i.onclick = () => {
-    chosenMode = i.dataset.mode;
+    chosenMode = i.dataset.mode;$("start-game").disabled=false;
     updatePreview(chosenMode,true);
     for (const t of document.querySelectorAll("[data-mode]"))
       (t.classList.toggle("active", t === i),
@@ -912,7 +928,7 @@ $("region-search").oninput = (i) => {
   const matches=data.pieces.filter(p=>(p.name+' '+p.acronym+' '+p.id).toLowerCase().includes(query)).slice(0,35);
   for(const p of matches){
     const b=document.createElement('button');b.textContent=p.name;b.setAttribute('aria-pressed',String(highlights.has(p.id)));
-    b.onclick=()=>{if(physics.intro)return;highlights.add(p.id);$("xray").checked=true;select(p.id);renderHighlights();b.setAttribute('aria-pressed','true');focusHighlights();};
+    b.onclick=()=>{if(physics.intro)return;highlights.add(p.id);select(p.id);renderHighlights();b.setAttribute('aria-pressed','true');focusHighlights();};
     $("search-results").append(b);
   }
   if(!matches.length)$("search-results").textContent='No matching region.';
@@ -940,7 +956,7 @@ $("play-again").onclick = () => {
   ($("complete-dialog").close(), goHome());
 };
 $("inspect-complete").onclick = () => {
-  ($("complete-dialog").close(), fitAll());
+  ($("complete-dialog").close(), party.reset(), fitAll());
 };
 for (const [i, t] of [
   ["lift-up", 1],
@@ -1038,7 +1054,7 @@ function animate(i) {
   if (
     !physics.intro &&
     r &&
-    selected !== void 0 && !party.active
+    selected !== void 0 && !party.active && !autoComplete?.active
   ) {
     const a = (keys.has("shift") ? 0.4 : 3) * e,
       o = new Vector3(),
@@ -1066,7 +1082,8 @@ function animate(i) {
   if (
     (drag && s.add(drag.id),
     r && s.add(selected),
-    !party.active && physics.tick(e, s),
+    !party.active && !autoComplete?.active && physics.tick(e, s),
+    autoComplete?.tick(t),
     updatePositions(),
     n)
   ) {
@@ -1087,6 +1104,8 @@ function animate(i) {
       ));
   }
   party.tick(t);
+  // Hide the floor from below so it never blocks ventral exploration.
+  floorRoot.visible=camera.position.y>=physics.floor;
   if(party.active)slices.plane.visible=false;
   (updateEffects(e), controls.update(), renderer.render(scene, camera));
 }
@@ -1174,20 +1193,40 @@ if (import.meta.env.DEV && new URLSearchParams(location.search).has("test")) {
     get party(){return party;},
     get highlights(){return highlights;},
     get theme(){return themeName;},
+    get autoComplete(){return autoComplete;},
+    get autoUsed(){return autoUsed;},
+    get controls(){return controls;},
   };
 }
 
 $("theme").onchange=e=>applyTheme(e.target.value);
-try{themeName=storage?.getItem('brain-party-theme')||'sand';}catch{}
+try{themeName=storage?.getItem('brain-party-theme')||'ocean';}catch{}
 applyTheme(themeName);$("theme").value=themeName;
 for(const button of document.querySelectorAll('[data-mode]')){
   button.onpointerenter=button.onfocus=()=>updatePreview(button.dataset.mode,true);
-  button.onpointerleave=button.onblur=()=>updatePreview(chosenMode,false);
+  button.onpointerleave=button.onblur=()=>updatePreview(chosenMode,true);
 }
-let previewCycle;
-$("difficulty-label").onpointerenter=()=>{let n=0;updatePreview('easy',true);previewCycle=setInterval(()=>updatePreview(['easy','medium','hard'][++n%3],true),1600);};
-$("difficulty-label").onpointerleave=()=>{clearInterval(previewCycle);updatePreview(chosenMode,false);};
 // Preserve the session when the GPU context is interrupted; restore UI state
 // after Three.js recreates its resources instead of leaving a frozen canvas.
 renderer.domElement.addEventListener('webglcontextlost',e=>{e.preventDefault();saveSession();setPause(true);toast('Graphics paused. Your puzzle is saved.');});
 renderer.domElement.addEventListener('webglcontextrestored',()=>{resize();if(hasGame){updatePositions();stylePieces();fitAll();}toast('Graphics restored. Resume when ready.');});
+
+function makeAutoComplete(){
+  autoComplete=new AutoComplete(puzzle,id=>{updatePositions();select(id);progress();slices.schedule();saveSession();if(puzzle.complete)finish();});
+}
+$("auto-complete").onclick=()=>{
+  if(busy || physics.intro || party.active || completed)return;
+  if(autoComplete.active){autoComplete.stop();$("auto-complete").textContent='Auto-complete';saveSession();return;}
+  autoUsed=true;started=false;keys.clear();drag=null;
+  // Put the growing cluster at a stable, anatomically valid location.
+  const largest=[...puzzle.groups.values()].sort((a,b)=>b.members.size-a.members.size)[0];
+  largest.offset=[0,0,0];updatePositions();autoComplete.start();
+  $("auto-complete").textContent='Stop auto-complete';$("auto-status").textContent='One cluster at a time · no celebration or score';fitAll();saveSession();
+};
+for(const b of document.querySelectorAll('[data-view]'))b.onclick=()=>{
+  if(!hasGame)return;
+  const box=new Box3().setFromObject(meshRoot),center=box.getCenter(new Vector3()),size=box.getSize(new Vector3());
+  const directions={default:[.65,1,1],xy:[0,0,1],yz:[1,0,0],zx:[0,1,.00001]};
+  controls.target.copy(center);camera.up.set(0,1,0);
+  camera.position.copy(center).add(new Vector3(...directions[b.dataset.view]).normalize().multiplyScalar(Math.max(size.x,size.y,size.z,10)*1.8));controls.update();
+};

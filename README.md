@@ -14,7 +14,7 @@ This imports the attached Neurospace game into `ShankarD112/brain_party`. Ground
 
 This remains a single-player puzzle. Shared rooms, accounts, online leaderboards, and multiplayer are not implemented. The repository remains private; this branch does not publish a live website automatically.
 
-The minimal homepage includes Start/Resume, Easy/Medium/Hard, and Beige/Ocean/Midnight themes. Region palettes vary by theme and use anatomical adjacency to separate neighbouring colours. Hover or focus a difficulty for its atlas turntable GIF; hovering the Difficulty label cycles all three. Reduced-motion mode uses static posters.
+The homepage starts with an unsegmented rotating brain and no difficulty selected. Hover or focus Easy/Medium/Hard to preview it, then select a difficulty to enable Start. Resume appears beneath Start for an existing session. Ocean is the default theme; Beige provides a light alternative. Real-time atlas turntables rotate smoothly and stop for reduced-motion preferences. Region palettes use anatomical adjacency to separate neighbouring colours.
 
 ## Play
 
@@ -24,7 +24,7 @@ Choose a difficulty and **Start**. Skip the opening if desired.
 - **E / Q** lift/lower; arrow keys move across the ground. **Shift** makes finer steps; **F** focuses the selection. Lift/Lower buttons also support press-and-hold.
 - Gravity starts on. Turn it off for gentle upward drift; small-volume regions rise faster than larger regions or joined clusters. Holding a piece pauses its drift. Floating pieces stop three atlas units above their floor position. Manual lifting has a shared ceiling above the full atlas, so the height limit never prevents anatomical assembly. The floor and finite board keep pieces within reach.
 - With height assist on, a true anatomical neighbor glows gold when close enough horizontally. Release or press Enter to connect. Turn assistance off for manual vertical alignment.
-- Search finds regions by name, acronym, or Allen ID. Click successive results to keep multiple regions highlighted in both views; remove individual chips or clear the search highlights. X-ray selection keeps highlighted surfaces opaque and dims the surrounding anatomy. Placement guides mark the anatomical target.
+- Search finds regions by name, acronym, or Allen ID. Click successive results to keep multiple regions highlighted in both views; remove individual chips or clear the search highlights. X-ray is off by default. When enabled, highlighted surfaces remain opaque with normal depth rendering; theme-specific transparency keeps surrounding anatomy visible. Placement guides mark the anatomical target.
 - Start with any neighboring pair: there is no fixed core. Joined clusters remain movable, even after completion. Shuffle moves only unconnected pieces.
 - The completion bar counts connections across all clusters. Finish by joining every region into one anatomical assembly.
 - The linked 2D panel shows coronal, sagittal, and horizontal sections in atlas coordinates. Joined regions appear in colour, with faint remaining anatomy for context. Selection is linked across views; use the depth slider or Find selected. Optional transparency reveals a selected region inside its cluster.
@@ -44,6 +44,8 @@ npm run build
 npx playwright install chromium
 npm run test:browser
 ```
+
+Use Default 3D, XY, YZ and ZX to reset the camera; orbit beneath the brain to inspect ventral anatomy. The floor disappears when viewed from below. Auto-complete joins remaining clusters sequentially, can be stopped, and excludes the run from celebrations and best times. Explore completed brain removes the party props. Slice hover labels show the acronym and name of joined regions, and `???` for loose regions.
 
 The production website is `dist/`. `npm run preview` serves the build locally. Open it through HTTP(S); this web version is not a standalone file to double-click.
 
@@ -94,3 +96,5 @@ The script emits the compressed binary files consumed by the web app. The option
 - `tests/`: atlas, rule, session, physics, and browser checks.
 
 No public distribution license is assigned to the application code. Third-party dependency and atlas terms remain applicable.
+
+The lightweight real-time homepage meshes are regenerated with `python scripts/build_preview_meshes.py` (NumPy required). Static PNG posters remain available as a graphics fallback.

@@ -9,7 +9,7 @@ class Physics {
       (this.puzzle = t),
       (this.bounds = e),
       (this.floor = Math.min(...[...e.values()].map((r) => r.min[1])) - 0.15),
-      (this.ceiling = Math.max(...[...e.values()].map(b => b.max[1])) + 3),
+      (this.ceiling = Math.max(...[...e.values()].map(b => b.max[1])) + 8),
       (this.gravity = true),
       (this.heightAssist = true),
       (this.velocity = /* @__PURE__ */ new Map()),
@@ -170,8 +170,8 @@ class Physics {
         if (this.gravity) this.fall(r, t);
         else {
           this.velocity.set(r.id, 0);
-          const room = Math.max(0, this.floorOffset(r) + 3 - r.offset[1]);
-          if(room>0)r.offset[1] = Math.min(this.floorOffset(r)+3, r.offset[1] + this.driftSpeed(r) * t * Math.min(1, room));
+          const room = Math.max(0, this.floorOffset(r) + 6 - r.offset[1]);
+          if(room>0)r.offset[1] = Math.min(this.floorOffset(r)+6, r.offset[1] + this.driftSpeed(r) * t * Math.min(1, room));
         }
         r.offset = this.constrain(r, r.offset);
       }

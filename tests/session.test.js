@@ -149,7 +149,7 @@ test("old sessions migrate to movable clusters",()=>{
 
 test('drift settles low while the shared ceiling permits anatomical assembly',()=>{
  const p=new Puzzle(data),world=new Physics(p,bounds,3);world.skipIntro();world.gravity=false;
- const g=p.group(4),floatLimit=world.floorOffset(g)+3;
+ const g=p.group(4),floatLimit=world.floorOffset(g)+6;
  world.move(4,[0,1e6,0]);assert.ok(world.groupBounds(g).max[1]<=world.ceiling);
  world.move(4,[0,floatLimit-.01,0]);world.tick(100);
  assert.ok(g.offset[1]<=floatLimit);

@@ -115,3 +115,18 @@ for (const mode of ["easy", "medium", "hard"])
     assert.ok([...puzzle.groups.values()].every(g=>!g.anchored));
   });
 
+
+test('auto-complete animates exactly one cluster per step, pauses, and preserves joins', async()=>{
+ const {AutoComplete}=await import('../src/autocomplete.js');
+ const p=new Puzzle(fixture,17);
+ p.move(1,[0,0,0]);p.move(2,[.01,0,0]);p.snap(2,.1);
+ const cluster=p.group(1),joins=[];
+ const auto=new AutoComplete(p,id=>joins.push(id));auto.start();auto.tick(.1);
+ assert.equal(p.groups.size,3);assert.equal(p.group(1),cluster);
+ const moving=auto.step.moving,mid=[...moving.offset];
+ assert.notDeepEqual(mid,auto.step.from);assert.notDeepEqual(mid,auto.step.to);
+ auto.stop();auto.tick(5);assert.deepEqual(moving.offset,mid);
+ auto.start();auto.tick(.35);assert.equal(p.groups.size,2);assert.equal(joins.length,1);
+ assert.equal(p.group(1),p.group(2));auto.tick(.35);
+ assert.ok(p.complete);assert.equal(joins.length,2);assert.equal(auto.active,false);
+});
