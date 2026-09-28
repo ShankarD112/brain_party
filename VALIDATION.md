@@ -1,6 +1,6 @@
 # Current exploration update
 
-27 unit/data tests and the production build pass. Both new Chromium scenarios passed at `dd203d85a072e61a61b5b3b9c04ad80e9f7def23` in [run 36357815415](https://github.com/ShankarD112/brain_party/actions/runs/36357815415): saved-puzzle preservation and resumption, parent acronym search, isolation, hierarchy navigation, crosshair coordinates, pinning, and plane changes. Their screenshots were inspected. The broader 11-scenario regression step is still running.
+27 unit/data tests, the production build, the exploration browser scenarios, and the broader browser regression suite pass on `main` at `067ce79867682dd215130dfdd3f6349b39d80b55` in [GitHub Actions run 36358367946](https://github.com/ShankarD112/brain_party/actions/runs/36358367946). Exploration coverage includes saved-puzzle preservation and resumption, parent acronym search, isolation, hierarchy navigation, crosshair coordinates, pinning, and plane changes.
 
 # Validation
 
@@ -14,4 +14,4 @@ Earlier large-atlas browser runs completed their interaction assertions but exce
 
 The 2D reference intersects simplified puzzle meshes at canonical atlas coordinates. It is not raw 25 µm imaging or a measurement tool. The homepage renders reduced atlas geometry in a live turntable for three difficulties, with Ocean and Beige palettes. Reduced-motion preferences stop rotation; a PNG poster is the graphics fallback.
 
-The workflow stores production output and browser screenshots as private artifacts. Hosting uses the separately managed private Site identified by `.openai/hosting.json`; publication status is checked separately from CI.
+The workflow stores production output and browser screenshots as private artifacts. Production hosting is managed separately through Vercel Git integration; CI success and deployment status should both be checked before treating a release as production-ready.
