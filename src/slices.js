@@ -96,7 +96,7 @@ export class SliceViewer {
     document.getElementById('slice-orientation').textContent=this.axis===1?'Anterior ↑ · Left–right ↔':'Dorsal ↑ · '+(this.axis===2?'Left–right ↔':'Anterior–posterior ↔');
     document.getElementById('slice-caption').textContent=`${joined} joined regions shown in colour. ${this.highlights?.size?`${highlightedInSlice} of ${this.highlights.size} search highlights intersect this slice. `:""}${visibleSelected?'Click a coloured section to select it.':'Selected region is outside this slice; use Find selected.'}`;
     this.updatePlane();
-    this.base.width=width;this.base.height=height;this.base.getContext('2d').drawImage(this.canvas,0,0);this.drawMarker();
+    this.base.width=width;this.base.height=height;this.base.getContext('2d').drawImage(this.canvas,0,0);this.drawMarker();this.onDraw?.();
   }
   setMarker(point,followDepth=false){
     if(!point)return;this.markerPoint=[...point];

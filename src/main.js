@@ -145,6 +145,7 @@ let themeName = "ocean", regionPalette = new Map();
 slices.highlights = highlights;
 let autoComplete, autoUsed=false;
 let sceneDirty=true;
+slices.onDraw=()=>{sceneDirty=true;};
 controls.addEventListener('change',()=>{sceneDirty=true;});
 for(const event of ['input','change','click'])document.addEventListener(event,()=>{sceneDirty=true;});
 window.addEventListener('resize',()=>{sceneDirty=true;});
