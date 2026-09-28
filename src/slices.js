@@ -11,7 +11,7 @@ export class SliceViewer {
     this.scene=scene;this.onSelect=onSelect;
     this.plane=new Mesh(new PlaneGeometry(1,1),new MeshBasicMaterial({color:'#ffcd71',transparent:true,opacity:.16,side:DoubleSide,depthWrite:false}));
     this.plane.visible=false;scene.add(this.plane);
-    document.getElementById('slice-axis').onchange=e=>{this.axis=Number(e.target.value);this.setMarker(this.markerPoint||this.bounds.get(this.selected).min,true);};
+    document.getElementById('slice-axis').onchange=e=>{this.axis=Number(e.target.value);this.setMarker(this.markerPoint||this.min.map((v,a)=>(v+this.max[a])/2),true);};
     document.getElementById('slice-depth').oninput=e=>{this.level=Number(e.target.value);if(this.markerPoint)this.markerPoint[this.axis]=this.level;this.schedule();};
     document.getElementById('slice-plane').onchange=()=>this.updatePlane();
     document.getElementById('slice-focus').onclick=()=>this.focus(this.selected);
@@ -24,7 +24,8 @@ export class SliceViewer {
       const hit=hitAt(e),label=document.getElementById('slice-hover');
       label.textContent=hit?(hit.connected?`${this.meshes.get(hit.id).userData.piece.acronym} · ${this.meshes.get(hit.id).userData.piece.name}`:'???'):'Hover over a section';
     };
-    this.canvas.onpointerleave=()=>document.getElementById('slice-hover').textContent='Hover over a section';
+    this.canvas.addEventListener('pointermove',()=>{const label=document.getElementById('slice-hover');label.title=label.textContent;});
+    this.canvas.onpointerleave=()=>{const label=document.getElementById('slice-hover');label.textContent='Hover over a section';label.title='';};
     this.canvas.onclick=e=>{
       this.markerFromEvent(e);const point=[...this.markerPoint];const hit=hitAt(e);if(hit?.connected)this.onSelect(hit.id);
       this.pinned=true;this.setMarker(point,true);document.getElementById('marker-unpin').hidden=false;
@@ -86,7 +87,7 @@ export class SliceViewer {
       const selected=id===this.selected || this.highlights?.has(id);
       ctx.globalAlpha=selected?1:connected?(document.getElementById("xray").checked?(this.theme?.sliceFade||.16):.85):.045;
       ctx.fillStyle=this.meshes.get(id).userData.displayColor||this.meshes.get(id).userData.piece.color;ctx.fill(path,'evenodd');
-      ctx.strokeStyle=selected?(this.theme?.ink||'#fff5cc'):(this.theme?.muted||'#6a8497');ctx.lineWidth=(selected?1.7:.6)*devicePixelRatio;ctx.stroke(outline);
+      ctx.strokeStyle=selected?(this.theme?.ink||'#fff5cc'):(this.theme?.muted||'#6a8497');ctx.lineWidth=(document.body.dataset.theme==='cartoon'?(selected?2.2:1.2):(selected?1.7:.6))*devicePixelRatio;ctx.stroke(outline);
       this.hitPaths.push({id,path,connected});
       if(selected && contours.length){visibleSelected=true;if(this.highlights?.has(id))highlightedInSlice++;}
     }
@@ -95,7 +96,7 @@ export class SliceViewer {
     document.getElementById('slice-orientation').textContent=this.axis===1?'Anterior ↑ · Left–right ↔':'Dorsal ↑ · '+(this.axis===2?'Left–right ↔':'Anterior–posterior ↔');
     document.getElementById('slice-caption').textContent=`${joined} joined regions shown in colour. ${this.highlights?.size?`${highlightedInSlice} of ${this.highlights.size} search highlights intersect this slice. `:""}${visibleSelected?'Click a coloured section to select it.':'Selected region is outside this slice; use Find selected.'}`;
     this.updatePlane();
-    this.base.width=width;this.base.height=height;this.base.getContext('2d').drawImage(this.canvas,0,0);this.drawMarker();
+    this.base.width=width;this.base.height=height;this.base.getContext('2d').drawImage(this.canvas,0,0);this.drawMarker();this.onDraw?.();
   }
   setMarker(point,followDepth=false){
     if(!point)return;this.markerPoint=[...point];

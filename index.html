@@ -43,7 +43,7 @@
           <button data-mode="hard" aria-pressed="false"><strong>Hard</strong><small>671 regions</small></button>
         </div>
         <div class="preview-frame"><img id="difficulty-preview" src="./previews/ocean-easy.png" alt="Rotating whole brain" width="360" height="300" /><canvas id="brain-turntable" width="360" height="300" aria-label="Rotating whole brain" hidden></canvas></div>
-        <label class="theme-control" for="theme">Theme <select id="theme"><option value="ocean">Ocean</option><option value="sand">Beige</option></select></label>
+        <label class="theme-control" for="theme">Theme <select id="theme"><option value="ocean">Ocean</option><option value="sand">Beige</option><option value="cartoon">Cartoon</option></select></label>
       </div>
     </main>
     <aside id="region-panel" class="panel game-ui">
@@ -64,7 +64,7 @@
         <button id="focus">Focus selected <kbd>F</kbd></button
         ><button id="next">Find a loose piece</button>
       </div>
-      <section id="explore-hierarchy" hidden><h3>Region hierarchy</h3><p class="small">Select a region to highlight its subregions. Expand arrows to go deeper.</p><label><input type="checkbox" id="isolate-region"> Show selected region only</label><div id="hierarchy-tree"></div></section>
+      <section id="explore-hierarchy" hidden><h3>Region hierarchy</h3><p class="small">Add regions to compare their subregions. Remove selections with the chips above. Expand arrows to go deeper.</p><label><input type="checkbox" id="isolate-region"> Show selected regions only</label><div id="hierarchy-tree"></div></section>
       <div class="physics-controls">
         <label
           ><input id="gravity" type="checkbox" checked /> Gravity

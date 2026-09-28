@@ -1,3 +1,4 @@
+import { setCartoonOutline } from "./cartoon.js";
 import {RegionHierarchy} from "./hierarchy.js";
 import { BrainPreview } from "./preview.js";
 import { AutoComplete } from "./autocomplete.js";
@@ -143,6 +144,13 @@ const highlights = new Set();
 let themeName = "ocean", regionPalette = new Map();
 slices.highlights = highlights;
 let autoComplete, autoUsed=false;
+let sceneDirty=true;
+slices.onDraw=()=>{sceneDirty=true;};
+controls.addEventListener('change',()=>{sceneDirty=true;});
+for(const event of ['input','change','click'])document.addEventListener(event,()=>{sceneDirty=true;});
+window.addEventListener('resize',()=>{sceneDirty=true;});
+slices.canvas.addEventListener('pointermove',()=>{if($("slice-plane").checked)sceneDirty=true;});
+const exploreSelections=new Set();
 let exploring=false, exploreChoice=false, hierarchy=null, exploreNode=null, selectingHierarchy=false;
 let boardBoundary;
 function updateBoardBoundary() {
@@ -267,7 +275,7 @@ function disposeScene() {
   party.reset();
   $("party-banner").hidden=true;
   (clearGhost(), clearEffects());
-  for (const i of meshes.values()) (i.geometry.dispose(), i.material.dispose());
+  for (const i of meshes.values()) {i.userData.cartoonOutline?.material.dispose();i.geometry.dispose();i.material.dispose();}
   (meshes.clear(), bounds.clear(), meshRoot.clear());
 }
 function updatePositions() {
@@ -300,12 +308,13 @@ function refreshGhost() {
     }
 }
 function stylePieces() {
+  sceneDirty=true;
   if(!puzzle)return;
   const group=selected===undefined?null:puzzle.group(selected), neighbors=new Set();
   if(group)for(const id of group.members)for(const n of puzzle.neighbors.get(id))neighbors.add(n);
   for(const [id,mesh] of meshes) {
     const g=puzzle.group(id), chosen=id===selected || highlights.has(id);
-    mesh.visible=exploring&&$("isolate-region").checked ? chosen : chosen || !$("spotlight").checked || g===group || neighbors.has(id);
+    mesh.visible=exploring&&highlights.size>0&&$("isolate-region").checked ? chosen : chosen || !$("spotlight").checked || g===group || neighbors.has(id);
     const faded=$("xray").checked && (group?.members.size>1 || highlights.size>0) && !chosen && !party.active;
     const color=regionPalette.get(id)||mesh.userData.piece.color;
     mesh.userData.displayColor=color;mesh.material.color.set(color);
@@ -315,12 +324,23 @@ function stylePieces() {
     mesh.material.depthWrite=!faded;
     mesh.renderOrder=faded?1:0;
     mesh.material.emissive.set(chosen?color:g===snapCandidate?'#816520':id===hovered?'#274955':'#000000');
+    setCartoonOutline(mesh,themeName==='cartoon'&&!faded);
     mesh.material.emissiveIntensity=chosen?themes[themeName].highlight:g===snapCandidate?.8:.25;
   }
 }
 function renderHighlights() {
   $("highlighted-regions").replaceChildren();
-  if(exploring){$("clear-highlights").hidden=true;return;}
+  if(exploring){
+    for(const id of exploreSelections){
+      const node=hierarchy.nodes.get(id),b=document.createElement('button');
+      b.textContent=node.acronym+' ×';b.title=node.name;
+      b.setAttribute('aria-label','Remove highlight: '+node.name);
+      b.onclick=()=>{exploreSelections.delete(id);rebuildExploreHighlights();};
+      $("highlighted-regions").append(b);
+    }
+    hierarchy?.markSelected(exploreSelections);
+    $("clear-highlights").hidden=exploreSelections.size===0;return;
+  }
   for(const id of highlights){
     const b=document.createElement('button');b.textContent=meshes.get(id).userData.piece.acronym+' ×';
     b.setAttribute('aria-label','Remove highlight: '+meshes.get(id).userData.piece.name);
@@ -351,12 +371,12 @@ function applyTheme(name) {
 }
 function updatePreview(mode,animate=true){
   const image=$("difficulty-preview"),level=mode||'whole';
-  image.src=`./previews/${themeName}-${mode||'easy'}.png`;image.classList.toggle('whole-brain',!mode);
+  image.src=`./previews/${themeName==='cartoon'?'ocean':themeName}-${mode||'easy'}.png`;image.classList.toggle('whole-brain',!mode);
   preview.show(mode,themeName);$("brain-turntable").setAttribute('aria-label',mode?mode+' difficulty brain':'Rotating whole brain');
   image.alt=mode?`${mode[0].toUpperCase()+mode.slice(1)}: ${{easy:15,medium:324,hard:671}[mode]} brain regions`:'Rotating whole brain';
 }
 function select(i, keepSlice = false) {
-  if(exploring&&!selectingHierarchy){exploreNode=hierarchy?.nodes.get(i);highlights.clear();highlights.add(i);renderHighlights();}
+  if(exploring&&!selectingHierarchy){exploreNode=hierarchy?.nodes.get(i);exploreSelections.add(i);syncExploreHighlights();renderHighlights();}
   ((selected = i), (snapCandidate = null));
   const t = meshes.get(i).userData.piece,
     e = puzzle.group(i);
@@ -592,6 +612,7 @@ function updateIntro() {
   if (!exploring && !physics.intro && !tutorialSeen && screen === "play")
     queueMicrotask(showTutorial);
   const i = physics.intro;
+  document.body.classList.toggle("opening-active",!!i && screen === "play");
   (($("intro-banner").hidden = !i || screen !== "play"),
     ($("gravity").disabled = i),
     ($("shuffle").disabled = i),
@@ -636,7 +657,7 @@ async function newGame(i = mode, t = false, saved = null, explore = false) {
     const restoredPuzzle = saved ? restore(n, saved) : null;
     if (e !== loadToken) return;
     exploring=explore;exploreNode=null;document.body.classList.toggle("is-exploring",exploring);$("explore-hierarchy").hidden=!exploring;$("isolate-region").checked=false;
-    highlights.clear();renderHighlights();autoComplete?.stop();autoUsed=false;$("auto-complete").disabled=false;$("auto-complete").textContent="Auto-complete";$("auto-status").textContent="";$("replay-party").hidden=false;
+    exploreSelections.clear();highlights.clear();renderHighlights();autoComplete?.stop();autoUsed=false;$("auto-complete").disabled=false;$("auto-complete").textContent="Auto-complete";$("auto-status").textContent="";$("replay-party").hidden=false;
     (disposeScene(),
       (data = n),
       (mode = i),
@@ -759,7 +780,7 @@ async function newGame(i = mode, t = false, saved = null, explore = false) {
       $("status").textContent="Explore the region hierarchy or search by acronym";
       $("save-status").textContent=savedSession?"Your saved puzzle is preserved":"Exploration does not overwrite puzzle saves";
       for(const d of $("hierarchy-tree").querySelectorAll("details"))d.open=false;
-      selectHierarchy(hierarchy.roots[0].id,false);fitAll();
+      exploreSelections.clear();highlights.clear();selected=undefined;exploreNode=null;renderHighlights();stylePieces();slices.selected=undefined;slices.schedule();describeHierarchy(hierarchy.roots[0]);fitAll();
     }else $("voyage-label").textContent="YOUR PUZZLE";
     if (!t) saveSession();
   } catch (n) {
@@ -958,7 +979,7 @@ $("region-search").oninput = (i) => {
   }
   if(!matches.length)$("search-results").textContent='No matching region.';
 };
-$("clear-highlights").onclick=()=>{highlights.clear();renderHighlights();stylePieces();slices.schedule();};
+$("clear-highlights").onclick=()=>{if(exploring){exploreSelections.clear();rebuildExploreHighlights();return;}highlights.clear();renderHighlights();stylePieces();slices.schedule();};
 $("guide").onchange = () => {
   ($("guide").checked && (assisted = true), refreshGhost());
 };
@@ -1059,7 +1080,7 @@ function animate(i) {
   if (((lastFrame = i), busy)) return;
   // Lower only the drawing resolution when sustained rendering is slow.
   // CSS coordinates, picking, and anatomical mesh detail remain unchanged.
-  if (!paused && t > .08 && t < 5) slowFrames++;
+  if (!paused && t > .08) slowFrames++;
   else slowFrames = 0;
   if (slowFrames >= 3 && renderer.getPixelRatio() > .5) {
     renderer.setPixelRatio(Math.max(.5, renderer.getPixelRatio() * .7));
@@ -1131,7 +1152,15 @@ function animate(i) {
   // Hide the floor from below so it never blocks ventral exploration.
   floorRoot.visible=!exploring&&camera.position.y>=physics.floor;
   if(party.active)slices.plane.visible=false;
-  (updateEffects(e), controls.update(), renderer.render(scene, camera));
+  updateEffects(e);controls.update();
+  // Explore has no moving pieces. Redraw only when controls, selection or markers change.
+  if(!exploring||sceneDirty){
+    sceneDirty=false;
+    const renderStart=performance.now();renderer.render(scene,camera);
+    if(performance.now()-renderStart>500 && renderer.getPixelRatio()>.5){
+      renderer.setPixelRatio(Math.max(.5,renderer.getPixelRatio()*.7));sceneDirty=true;
+    }
+  }
 }
 function startParty() {
   $("complete-dialog").close();
@@ -1270,10 +1299,22 @@ function describeHierarchy(node){
 }
 function selectHierarchy(id,focus=true){
  const node=hierarchy?.nodes.get(id);if(!node?.members.length)return;
- exploreNode=node;highlights.clear();for(const member of node.members)highlights.add(member);
+ exploreNode=node;exploreSelections.add(id);syncExploreHighlights();
  selectingHierarchy=true;select(meshes.has(id)?id:node.members[0]);selectingHierarchy=false;
  describeHierarchy(node);renderHighlights();hierarchy.reveal(id);
  const box=new Box3();for(const member of node.members){const b=bounds.get(member);box.expandByPoint(new Vector3(...b.min));box.expandByPoint(new Vector3(...b.max));}
  slices.setMarker(box.getCenter(new Vector3()).toArray(),true);
  if(focus)focusHighlights();
+}
+
+function syncExploreHighlights(){
+ highlights.clear();for(const id of exploreSelections)for(const member of hierarchy.nodes.get(id).members)highlights.add(member);
+}
+function rebuildExploreHighlights(){
+ syncExploreHighlights();
+ if(!highlights.has(selected)){selected=highlights.values().next().value;slices.selected=selected;}
+ exploreNode=hierarchy.nodes.get([...exploreSelections].at(-1));
+ if(exploreNode)describeHierarchy(exploreNode);
+ else {$("selection-tag").textContent="SELECT REGIONS";$("region-name").textContent="Search or browse the hierarchy";$("region-path").textContent="";$("region-detail").textContent="";}
+ renderHighlights();stylePieces();slices.schedule();
 }

@@ -1261,3 +1261,19 @@ label,input[type=checkbox],input[type=range]{accent-color:var(--accent)}
  .scene-actions{display:flex;flex-direction:row;gap:4px;left:12px;right:12px;bottom:46px;width:auto;transform:none}.scene-actions button{width:auto;flex:1;font-size:10px;padding:7px 4px}
  .is-exploring #region-panel{bottom:164px}#just-explore{margin-bottom:12px}.home-content h1{margin-top:10px;margin-bottom:16px}.home-start{margin-bottom:16px}
 }
+
+/* The opening owns its space; camera actions return when it ends. */
+.opening-active .scene-actions,.opening-active .auto-controls,.opening-active .camera-views{visibility:hidden;pointer-events:none}
+.intro-banner{left:50%;right:auto;top:185px;bottom:auto;transform:translateX(-50%);width:min(430px,calc(100vw - 32px));min-width:0;box-sizing:border-box;flex-wrap:wrap;gap:12px;padding:18px;z-index:20}
+.intro-banner h2{font-size:22px}.intro-banner p{font-size:14px}.intro-banner button{margin-left:auto}
+@media(max-width:760px){.intro-banner{top:220px;max-height:calc(100dvh - 240px);overflow:auto}}
+/* Fixed label space prevents the pointer target moving as text changes. */
+#slice-hover{height:3em;min-height:3em;line-height:1.5;overflow:auto;overflow-wrap:anywhere;margin:4px 0 8px;scrollbar-gutter:stable}
+#marker-coordinates{white-space:nowrap;font-variant-numeric:tabular-nums}
+body[data-theme=cartoon] button,body[data-theme=cartoon] select{border:2px solid var(--ink);border-radius:12px;box-shadow:2px 3px 0 var(--ink);font-weight:700}
+body[data-theme=cartoon] button:hover{background:#ffdd58;color:var(--ink)}
+body[data-theme=cartoon] button:active{box-shadow:none;translate:1px 2px}
+body[data-theme=cartoon] .panel,body[data-theme=cartoon] .slice-panel,body[data-theme=cartoon] .intro-banner{border:2px solid var(--ink);box-shadow:4px 5px 0 var(--ink)}
+body[data-theme=cartoon] h1{color:var(--ink);text-shadow:3px 3px 0 #ffca32}
+body[data-theme=cartoon] .primary{background:#ffca32;color:var(--ink)}
+body[data-theme=cartoon] .hierarchy-node button{box-shadow:none;border:0;border-radius:5px}
