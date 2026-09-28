@@ -1,10 +1,17 @@
 name: Test browser game
+
 on:
   push:
   pull_request:
   workflow_dispatch:
+
 permissions:
   contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -22,6 +29,7 @@ jobs:
         with:
           name: brain-party-website
           path: dist/
+          retention-days: 7
       - run: npx playwright install --with-deps chromium
       - run: npm run test:browser
       - uses: actions/upload-artifact@v4
@@ -29,3 +37,4 @@ jobs:
         with:
           name: browser-checks
           path: test-results/
+          retention-days: 7
