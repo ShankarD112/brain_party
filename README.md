@@ -2,6 +2,13 @@
 
 A browser-first 3D anatomical jigsaw puzzle. Open the website, choose a difficulty, and put a real mouse brain back together. No desktop installation or account is needed.
 
+## Project links
+
+- Live site: https://brain-party-rho.vercel.app/
+- Validation status and known limitations: [VALIDATION.md](VALIDATION.md)
+- Contribution workflow: [CONTRIBUTING.md](CONTRIBUTING.md)
+- Security reporting: [SECURITY.md](SECURITY.md)
+
 ## Current version
 
 This imports the attached Neurospace game into `ShankarD112/brain_party`. Ground-plane dragging, gravity, height assistance, the skippable opening, and connection feedback are recovered from Windows 1.2. The original source package supplies the smaller precomputed meshes, full contact graphs, atlas preprocessing, and rule tests.
@@ -62,7 +69,7 @@ Import this private repository into the chosen static host with access limited t
 
 `netlify.toml` and `vercel.json` include those settings. A relative Vite base also supports hosting beneath a subpath. The loader accepts `.bin.gz` both as ordinary files and as HTTP gzip responses: it checks the received bytes before decompression to avoid decoding twice. The host may compress JS/CSS normally.
 
-Choose the website audience separately from repository visibility. A private source repository does not make the deployed website private. `.openai/hosting.json` identifies the separately managed private Sites build; no deployment credentials are included. GitHub changes do not automatically publish to Sites.
+Production hosting uses Vercel Git integration. Repository visibility and website visibility are separate: the GitHub source can remain private while the deployed website is publicly shareable. Keep `main` as the stable production branch after feature work has passed CI; Vercel preview deployments can be used for branch testing.
 
 ## Slice interpretation
 
