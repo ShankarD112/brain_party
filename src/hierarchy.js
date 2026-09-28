@@ -25,8 +25,9 @@ export class RegionHierarchy {
   };
   for(const root of this.roots)container.append(make(root.id));
  }
+ markSelected(ids){for(const [id,b] of this.buttons)b.setAttribute('aria-pressed',String(ids.has(id)));}
  reveal(id){
-  for(const b of this.buttons.values())b.setAttribute('aria-pressed',String(Number(b.dataset.region)===id));
+
   const button=this.buttons.get(id);let parent=button?.parentElement;
   while(parent){if(parent.tagName==='DETAILS')parent.open=true;parent=parent.parentElement;}
   button?.scrollIntoView({block:'nearest'});

@@ -33,3 +33,49 @@ test('slice marker coordinates follow the crosshair, pin, and survive plane chan
  const camera=await page.locator('.camera-views').boundingBox();expect(camera.x).toBeGreaterThan(1000);
  await page.screenshot({path:'test-results/slice-marker.png'});
 });
+
+test('explore keeps overlapping selections, removes chips, and renders Cartoon',async({page})=>{
+ test.setTimeout(180000);const errors=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.emulateMedia({reducedMotion:'reduce'});await page.goto('/?test');
+ await page.locator('#theme').selectOption('cartoon');await page.locator('#just-explore').click();await page.locator('#start-game').click();
+ await expect(page.locator('#loading')).toBeHidden({timeout:60000});
+ await expect(page.locator('#highlighted-regions button')).toHaveCount(0);
+ for(const acronym of ['TH','VAL','CB']){
+  await page.locator('#region-search').fill(acronym);await page.locator('#search-results button').filter({hasText:new RegExp('^'+acronym+' · ')}).first().click();
+ }
+ await expect(page.locator('#highlighted-regions button')).toHaveCount(3);
+ const union=await page.evaluate(()=>{const t=window.__TEST__;return [...new Set(['TH','VAL','CB'].flatMap(a=>t.hierarchy.search(a)[0].members))].sort((a,b)=>a-b);});
+ expect(await page.evaluate(()=>[...window.__TEST__.highlights].sort((a,b)=>a-b))).toEqual(union);
+ await page.locator('#highlighted-regions button').filter({hasText:/^TH ×$/}).click();
+ const remaining=await page.evaluate(()=>{const t=window.__TEST__;return [...new Set(['VAL','CB'].flatMap(a=>t.hierarchy.search(a)[0].members))].sort((a,b)=>a-b);});
+ expect(await page.evaluate(()=>[...window.__TEST__.highlights].sort((a,b)=>a-b))).toEqual(remaining);
+ await page.locator('#isolate-region').check();
+ expect(await page.evaluate(()=>[...window.__TEST__.meshes.values()].filter(m=>m.visible).length)).toBe(remaining.length);
+ await page.locator('#isolate-region').uncheck();await page.locator('#xray').check();
+ expect(await page.evaluate(()=>{const t=window.__TEST__;return [...t.meshes].every(([id,m])=>m.userData.cartoonOutline.visible===t.highlights.has(id));})).toBe(true);
+ await page.screenshot({path:'test-results/cartoon-explore.png'});
+ await page.locator('#clear-highlights').click();
+ expect(await page.evaluate(()=>window.__TEST__.highlights.size)).toBe(0);
+ await expect(page.locator('#highlighted-regions button')).toHaveCount(0);
+ await page.locator('#slice-axis').selectOption('0');
+ await page.locator('#menu').click();await page.reload();await expect(page.locator('#theme')).toHaveValue('cartoon');
+ expect(errors).toEqual([]);
+});
+
+test('opening leaves controls clear and long slice labels keep the canvas steady',async({page})=>{
+ test.setTimeout(90000);await page.goto('/?test');await page.locator('[data-mode=easy]').click();await page.locator('#start-game').click();
+ await expect(page.locator('#loading')).toBeHidden({timeout:60000});
+ // Freeze the opening at a visible phase while inspecting responsive geometry.
+ await page.evaluate(()=>{window.__TEST__.physics.tick=()=>{};});
+ await expect(page.locator('#intro-banner')).toBeVisible();
+ for(const size of [{width:1440,height:1000},{width:390,height:844}]){
+  await page.setViewportSize(size);await expect(page.locator('.scene-actions')).toBeHidden();
+  const banner=await page.locator('#intro-banner').boundingBox();expect(banner.x).toBeGreaterThanOrEqual(0);expect(banner.x+banner.width).toBeLessThanOrEqual(size.width);
+ }
+ await page.locator('#skip-intro').click();await page.locator('#tutorial-skip').click();await expect(page.locator('#overview')).toBeVisible();
+ await page.locator('#slices-toggle').click();
+ const before=await page.locator('#slice-canvas').boundingBox();
+ await page.evaluate(()=>document.getElementById('slice-hover').textContent='SSp-bfd6a · Primary somatosensory area, barrel field, layer 6a, a very long region name');
+ const after=await page.locator('#slice-canvas').boundingBox();expect(after.y).toBe(before.y);expect(after.height).toBe(before.height);
+ await page.screenshot({path:'test-results/stable-slice-label-mobile.png'});
+});
