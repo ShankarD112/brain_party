@@ -144,6 +144,11 @@ const highlights = new Set();
 let themeName = "ocean", regionPalette = new Map();
 slices.highlights = highlights;
 let autoComplete, autoUsed=false;
+let sceneDirty=true;
+controls.addEventListener('change',()=>{sceneDirty=true;});
+for(const event of ['input','change','click'])document.addEventListener(event,()=>{sceneDirty=true;});
+window.addEventListener('resize',()=>{sceneDirty=true;});
+slices.canvas.addEventListener('pointermove',()=>{if($("slice-plane").checked)sceneDirty=true;});
 const exploreSelections=new Set();
 let exploring=false, exploreChoice=false, hierarchy=null, exploreNode=null, selectingHierarchy=false;
 let boardBoundary;
@@ -302,12 +307,13 @@ function refreshGhost() {
     }
 }
 function stylePieces() {
+  sceneDirty=true;
   if(!puzzle)return;
   const group=selected===undefined?null:puzzle.group(selected), neighbors=new Set();
   if(group)for(const id of group.members)for(const n of puzzle.neighbors.get(id))neighbors.add(n);
   for(const [id,mesh] of meshes) {
     const g=puzzle.group(id), chosen=id===selected || highlights.has(id);
-    mesh.visible=exploring&&$("isolate-region").checked ? chosen : chosen || !$("spotlight").checked || g===group || neighbors.has(id);
+    mesh.visible=exploring&&highlights.size>0&&$("isolate-region").checked ? chosen : chosen || !$("spotlight").checked || g===group || neighbors.has(id);
     const faded=$("xray").checked && (group?.members.size>1 || highlights.size>0) && !chosen && !party.active;
     const color=regionPalette.get(id)||mesh.userData.piece.color;
     mesh.userData.displayColor=color;mesh.material.color.set(color);
@@ -1073,7 +1079,7 @@ function animate(i) {
   if (((lastFrame = i), busy)) return;
   // Lower only the drawing resolution when sustained rendering is slow.
   // CSS coordinates, picking, and anatomical mesh detail remain unchanged.
-  if (!paused && t > .08 && t < 5) slowFrames++;
+  if (!paused && t > .08) slowFrames++;
   else slowFrames = 0;
   if (slowFrames >= 3 && renderer.getPixelRatio() > .5) {
     renderer.setPixelRatio(Math.max(.5, renderer.getPixelRatio() * .7));
@@ -1145,7 +1151,15 @@ function animate(i) {
   // Hide the floor from below so it never blocks ventral exploration.
   floorRoot.visible=!exploring&&camera.position.y>=physics.floor;
   if(party.active)slices.plane.visible=false;
-  (updateEffects(e), controls.update(), renderer.render(scene, camera));
+  updateEffects(e);controls.update();
+  // Explore has no moving pieces. Redraw only when controls, selection or markers change.
+  if(!exploring||sceneDirty){
+    sceneDirty=false;
+    const renderStart=performance.now();renderer.render(scene,camera);
+    if(performance.now()-renderStart>500 && renderer.getPixelRatio()>.5){
+      renderer.setPixelRatio(Math.max(.5,renderer.getPixelRatio()*.7));sceneDirty=true;
+    }
+  }
 }
 function startParty() {
   $("complete-dialog").close();

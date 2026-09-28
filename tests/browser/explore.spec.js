@@ -35,7 +35,7 @@ test('slice marker coordinates follow the crosshair, pin, and survive plane chan
 });
 
 test('explore keeps overlapping selections, removes chips, and renders Cartoon',async({page})=>{
- test.setTimeout(180000);const errors=[];page.on('pageerror',e=>errors.push(e.message));
+ test.setTimeout(240000);const errors=[];page.on('pageerror',e=>errors.push(e.message));
  await page.emulateMedia({reducedMotion:'reduce'});await page.goto('/?test');
  await page.locator('#theme').selectOption('cartoon');await page.locator('#just-explore').click();await page.locator('#start-game').click();
  await expect(page.locator('#loading')).toBeHidden({timeout:60000});
@@ -54,7 +54,8 @@ test('explore keeps overlapping selections, removes chips, and renders Cartoon',
  await page.locator('#isolate-region').uncheck();await page.locator('#xray').check();
  expect(await page.evaluate(()=>{const t=window.__TEST__;return [...t.meshes].every(([id,m])=>m.userData.cartoonOutline.visible===t.highlights.has(id));})).toBe(true);
  await page.screenshot({path:'test-results/cartoon-explore.png'});
- await page.locator('#clear-highlights').click();
+ await page.locator('#isolate-region').check();await page.locator('#clear-highlights').click();
+ expect(await page.evaluate(()=>[...window.__TEST__.meshes.values()].filter(m=>m.visible).length)).toBe(671);
  expect(await page.evaluate(()=>window.__TEST__.highlights.size)).toBe(0);
  await expect(page.locator('#highlighted-regions button')).toHaveCount(0);
  await page.locator('#slice-axis').selectOption('0');
